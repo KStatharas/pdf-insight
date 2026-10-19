@@ -1,6 +1,8 @@
+import asyncio
 import json
 import logging
 import re
+import time
 from typing import Any, Protocol
 
 import httpx
@@ -66,6 +68,8 @@ class OpenAICompatibleChat:
 
 
 _TRY_NEXT_MODEL = frozenset({404, 429, 500, 502, 503, 504})
+_SECOND_ROUND_DELAY_S = 1.5
+_SECOND_ROUND_DEADLINE_S = 12.0
 _DATA_URL = re.compile(r"^data:(?P<mime>[\w.+-]+/[\w.+-]+);base64,(?P<data>.+)$", re.DOTALL)
 
 
@@ -89,25 +93,37 @@ class GeminiChat:
 
     async def complete(self, messages: list[Message], *, schema: JsonObject | None = None) -> str:
         # Free-tier capacity differs per model: when one is overloaded, rate limited or not
-        # available for the key, try the next one and keep using whichever answered.
-        order = self._models[self._preferred :] + self._models[: self._preferred]
-        for attempt, model in enumerate(order):
-            response = await self._request(model, messages, schema)
-            is_last = attempt == len(order) - 1
-            if response.status_code in _TRY_NEXT_MODEL and not is_last:
+        # available for the key, try the next one and keep using whichever answered. If all of
+        # them are briefly overloaded, wait a moment and go through the list once more, but only
+        # while there is still time to answer within the 30-second goal.
+        started = time.monotonic()
+        response: httpx.Response | None = None
+        for round_number in range(2):
+            if round_number:
+                if time.monotonic() - started > _SECOND_ROUND_DEADLINE_S:
+                    break
+                await asyncio.sleep(_SECOND_ROUND_DELAY_S)
+            order = self._models[self._preferred :] + self._models[: self._preferred]
+            for model in order:
+                response = await self._request(model, messages, schema)
+                if response.status_code not in _TRY_NEXT_MODEL:
+                    _raise_for_status(response)
+                    self._preferred = self._models.index(model)
+                    self.name = model
+                    return _gemini_text(response.json())
                 logger.warning(
-                    "Model %s answered %s, trying %s: %s",
+                    "Model %s answered %s: %s",
                     model,
                     response.status_code,
-                    order[attempt + 1],
                     _error_snippet(response),
                 )
-                continue
+        if response is not None:
             _raise_for_status(response)
-            self._preferred = self._models.index(model)
-            self.name = model
-            return _gemini_text(response.json())
-        raise AssertionError("unreachable")  # pragma: no cover
+        raise AppError(
+            "AI_UNAVAILABLE",
+            "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę.",
+            503,
+        )
 
     async def _request(
         self, model: str, messages: list[Message], schema: JsonObject | None

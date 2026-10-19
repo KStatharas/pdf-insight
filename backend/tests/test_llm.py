@@ -255,9 +255,23 @@ def test_gemini_falls_back_to_the_next_model_and_keeps_using_it() -> None:
     assert chat.name == "model-c"
 
 
-def test_gemini_reports_the_error_when_every_model_fails() -> None:
-    reply = httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
-    chat = _gemini(httpx.MockTransport(lambda _: reply), llm_fallback_models="model-b")
+def test_gemini_reports_the_error_when_every_model_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.llm._SECOND_ROUND_DELAY_S", 0)
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
+
+    chat = _gemini(httpx.MockTransport(handler), llm_fallback_models="model-b")
     with pytest.raises(AppError) as error:
         asyncio.run(chat.complete([{"role": "user", "content": "a"}]))
     assert error.value.code == "AI_UNAVAILABLE"
+    assert len(calls) == 4  # two rounds over both models
+
+
+def test_gemini_second_round_recovers_from_brief_overload(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.llm._SECOND_ROUND_DELAY_S", 0)
+    replies = [httpx.Response(503, json={}), _gemini_reply("{}")]
+    chat = _gemini(httpx.MockTransport(lambda _: replies.pop(0)))
+    assert asyncio.run(chat.complete([{"role": "user", "content": "a"}])) == "{}"
