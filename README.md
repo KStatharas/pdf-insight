@@ -79,15 +79,16 @@ wyświetli, zapisze w historii lub pozwoli pobrać.
 W nagłówku jest lista **Język / Language**. Wybór zmienia cały interfejs (teksty, komunikaty
 błędów, ostrzeżenia, format liczb i dat) i jest zapamiętywany w przeglądarce; domyślnie polski.
 
-- **Podsumowanie** jest tłumaczone na wybrany język na żądanie (`POST /api/translate`),
-  z linkiem „Pokaż oryginał” / „Show original”. Tłumaczenie jest zapisywane w przeglądarce,
-  więc ponowne przełączenie nie wysyła kolejnego zapytania.
+- **Podsumowanie, kluczowe informacje oraz opisy kwot i terminów** są tłumaczone na wybrany
+  język jednym zapytaniem (`POST /api/translate` z listą tekstów). Tłumaczenie jest zapisywane
+  w przeglądarce, więc ponowne przełączenie nie wysyła kolejnego zapytania.
 - **Wynik analizy i plik JSON nie zmieniają się** — zawsze są w języku dokumentu. Tłumaczenie
-  dotyczy tylko widoku. Pozostałe pola (kluczowe informacje, opisy kwot) zostają w oryginale.
+  dotyczy tylko widoku. Tytuł, nazwy stron, osoby i słowa kluczowe zostają w oryginale.
 - Ostrzeżenia mają kody (`meta.notices`), dzięki czemu interfejs pokazuje je w swoim języku;
   pole `meta.warnings` (po polsku) zostało bez zmian.
-- `/api/translate` traktuje tekst jako dane (polecenia w nim są tłumaczone, nie wykonywane),
-  waliduje odpowiedź (1 ponowna próba) i ma osobny limit (40 zapytań / 10 min na IP).
+- `/api/translate` traktuje teksty jako dane (polecenia w nich są tłumaczone, nie wykonywane),
+  wymaga dokładnie jednego tłumaczenia na tekst (inaczej 1 ponowna próba), przyjmuje do 120
+  tekstów (łącznie 30 000 znaków) i ma osobny limit (40 zapytań / 10 min na IP).
 
 ## Bezpieczeństwo
 
