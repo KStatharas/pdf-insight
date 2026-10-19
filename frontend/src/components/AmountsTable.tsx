@@ -1,29 +1,33 @@
+import { useI18n } from '../i18n/context';
 import { formatAmountValue } from '../lib/format';
 import type { Amount } from '../lib/schema';
 
-export function AmountsTable({ amounts }: { amounts: Amount[] }) {
+export function AmountsTable({ amounts, lang }: { amounts: Amount[]; lang: string | undefined }) {
+  const { t, locale } = useI18n();
   if (amounts.length === 0) {
-    return <p className="muted">Dokument nie zawiera kwot.</p>;
+    return <p className="muted">{t.amounts.empty}</p>;
   }
 
   return (
     <div className="table-scroll">
       <table className="ledger">
-        <caption className="visually-hidden">Kwoty wymienione w dokumencie</caption>
+        <caption className="visually-hidden">{t.amounts.caption}</caption>
         <thead>
           <tr>
-            <th scope="col">Czego dotyczy</th>
+            <th scope="col">{t.amounts.context}</th>
             <th scope="col" className="num">
-              Kwota
+              {t.amounts.value}
             </th>
-            <th scope="col">Waluta</th>
+            <th scope="col">{t.amounts.currency}</th>
           </tr>
         </thead>
         <tbody>
           {amounts.map((amount, index) => (
             <tr key={`${String(amount.value)}-${amount.currency ?? ''}-${String(index)}`}>
-              <td>{amount.context ?? <span className="muted">brak opisu</span>}</td>
-              <td className="num">{formatAmountValue(amount.value)}</td>
+              <td lang={lang}>
+                {amount.context ?? <span className="muted">{t.amounts.noContext}</span>}
+              </td>
+              <td className="num">{formatAmountValue(amount.value, locale)}</td>
               <td className="currency">{amount.currency ?? '—'}</td>
             </tr>
           ))}

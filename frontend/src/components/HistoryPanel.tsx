@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { DOCUMENT_TYPE_LABELS, formatTimestamp } from '../lib/format';
+import { useI18n } from '../i18n/context';
+import { formatTimestamp } from '../lib/format';
 import type { HistoryEntry } from '../lib/history';
 
 interface HistoryPanelProps {
@@ -12,6 +13,7 @@ interface HistoryPanelProps {
 }
 
 export function HistoryPanel({ entries, onOpen, onRemove, onClear, onClose }: HistoryPanelProps) {
+  const { t, locale } = useI18n();
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -29,24 +31,22 @@ export function HistoryPanel({ entries, onOpen, onRemove, onClear, onClose }: Hi
     >
       <div className="history-head">
         <h2 id="history-title" ref={headingRef} tabIndex={-1}>
-          Ostatnie analizy
+          {t.history.title}
         </h2>
         <div className="button-row">
           {entries.length > 0 && (
             <button type="button" className="button button-quiet" onClick={onClear}>
-              Wyczyść historię
+              {t.history.clear}
             </button>
           )}
           <button type="button" className="button button-quiet" onClick={onClose}>
-            Zamknij
+            {t.history.close}
           </button>
         </div>
       </div>
 
       {entries.length === 0 ? (
-        <p className="muted">
-          Nie ma jeszcze zapisanych analiz. Wyniki zapisują się automatycznie w tej przeglądarce.
-        </p>
+        <p className="muted">{t.history.empty}</p>
       ) : (
         <ul className="history-list">
           {entries.map((entry) => (
@@ -62,19 +62,20 @@ export function HistoryPanel({ entries, onOpen, onRemove, onClear, onClose }: Hi
                   {entry.result.document.title ?? entry.result.document.fileName}
                 </span>
                 <span className="history-meta">
-                  {DOCUMENT_TYPE_LABELS[entry.result.document.type]} ·{' '}
-                  {entry.result.document.fileName} · {formatTimestamp(entry.savedAt)}
+                  <span>{t.documentTypes[entry.result.document.type]}</span>
+                  <span>{entry.result.document.fileName}</span>
+                  <span>{formatTimestamp(entry.savedAt, locale)}</span>
                 </span>
               </button>
               <button
                 type="button"
                 className="button button-quiet button-small"
-                aria-label={`Usuń z historii: ${entry.result.document.fileName}`}
+                aria-label={t.history.removeLabel(entry.result.document.fileName)}
                 onClick={() => {
                   onRemove(entry.id);
                 }}
               >
-                Usuń
+                {t.history.remove}
               </button>
             </li>
           ))}

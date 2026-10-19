@@ -191,6 +191,33 @@ pre {
   flex-wrap: wrap;
 }
 
+.language {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.language-label {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.language-select {
+  min-height: 2.75rem;
+  padding: 0.375rem 2rem 0.375rem 0.75rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-control);
+  background-color: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-select:hover {
+  border-color: var(--ink);
+}
+
 .health {
   display: inline-flex;
   align-items: center;
@@ -622,6 +649,10 @@ pre {
   overflow-wrap: anywhere;
 }
 
+.history-meta span + span::before {
+  content: ' · ';
+}
+
 /* ---------- Result ---------- */
 
 .result {
@@ -751,6 +782,34 @@ pre {
   line-height: 1.65;
   max-width: 64ch;
   font-variation-settings: 'opsz' 24;
+}
+
+.summary.is-pending {
+  color: var(--ink-soft);
+}
+
+.translation-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin-top: 0.75rem;
+  max-width: 64ch;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.translation-failed {
+  color: var(--warn-ink);
+}
+
+.spinner {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--rule-strong);
+  border-top-color: var(--stamp);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .key-points {
@@ -945,10 +1004,40 @@ pre {
   .header-actions {
     width: 100%;
     justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  /* The select still has its accessible name; the visible label does not fit next to it. */
+  .language-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .language-select {
+    padding: 0.375rem 1.25rem 0.375rem 0.5rem;
+  }
+
+  .header .button {
+    padding-inline: 0.75rem;
+  }
+
+  .health {
+    gap: 0.375rem;
+    font-size: 0.8125rem;
   }
 }
 
 /* ---------- Motion ---------- */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 @keyframes pulse {
   50% {

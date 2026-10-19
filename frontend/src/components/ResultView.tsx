@@ -1,18 +1,14 @@
 import { useId, useState } from 'react';
 
+import { useI18n } from '../i18n/context';
+import type { Messages } from '../i18n/messages';
 import { downloadResult, jsonFileName } from '../lib/download';
-import {
-  DOCUMENT_TYPE_LABELS,
-  formatIsoDate,
-  formatSeconds,
-  formatTimestamp,
-  languageName,
-  pluralPages,
-} from '../lib/format';
-import type { AnalysisResult } from '../lib/schema';
+import { formatIsoDate, formatSeconds, formatTimestamp, languageName } from '../lib/format';
+import type { AnalysisMeta, AnalysisResult } from '../lib/schema';
 import { AmountsTable } from './AmountsTable';
 import { DatesTimeline } from './DatesTimeline';
 import { JsonPreview } from './JsonPreview';
+import { SummarySection } from './SummarySection';
 
 interface ResultViewProps {
   result: AnalysisResult;
@@ -23,36 +19,62 @@ interface ResultViewProps {
 
 type Tab = 'view' | 'json';
 
+/** Warnings in the interface language; results saved before notices existed keep their text. */
+function warningTexts(meta: AnalysisMeta, t: Messages): string[] {
+  if (!meta.notices) return meta.warnings;
+  return meta.notices.map((notice) => {
+    switch (notice.code) {
+      case 'PROMPT_INJECTION':
+        return t.notices.PROMPT_INJECTION;
+      case 'UNREAD_PAGES':
+        return t.notices.UNREAD_PAGES(notice.pages);
+      case 'TRUNCATED':
+        return t.notices.TRUNCATED(notice.percent);
+    }
+  });
+}
+
 export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
+  const { t, locale, language } = useI18n();
   const [tab, setTab] = useState<Tab>('view');
   const baseId = useId();
   const { document: doc, meta } = result;
+  // Values written by the model stay in the document's language; mark them for screen readers.
+  const docLang = doc.language ?? undefined;
+  const warnings = meta ? warningTexts(meta, t) : [];
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'view', label: 'Wyniki' },
-    { id: 'json', label: 'JSON' },
+    { id: 'view', label: t.result.tabView },
+    { id: 'json', label: t.result.tabJson },
   ];
 
   return (
     <article className="result" aria-labelledby="result-title">
       <header className="result-head">
         <div className={`stamp stamp-${doc.type}`} aria-hidden="true">
-          {DOCUMENT_TYPE_LABELS[doc.type]}
+          {t.documentTypes[doc.type]}
         </div>
         <div className="result-heading">
-          <h1 id="result-title">{doc.title ?? doc.fileName}</h1>
+          <h1 id="result-title" lang={docLang}>
+            {doc.title ?? doc.fileName}
+          </h1>
           <p className="result-sub">
             <span className="visually-hidden">
-              Typ dokumentu: {DOCUMENT_TYPE_LABELS[doc.type]}.{' '}
+              {t.result.documentType}: {t.documentTypes[doc.type]}.{' '}
             </span>
-            {doc.date ? <>Data dokumentu: {formatIsoDate(doc.date)}</> : 'Brak daty dokumentu'}
-            {savedAt && <span className="muted"> · z historii, {formatTimestamp(savedAt)}</span>}
+            {doc.date ? t.result.documentDate(formatIsoDate(doc.date, locale)) : t.result.noDate}
+            {savedAt && (
+              <span className="muted">
+                {' '}
+                · {t.result.fromHistory(formatTimestamp(savedAt, locale))}
+              </span>
+            )}
           </p>
         </div>
       </header>
 
       <div className="result-toolbar">
-        <div className="tabs" role="tablist" aria-label="Widok wyniku">
+        <div className="tabs" role="tablist" aria-label={t.result.tabsLabel}>
           {tabs.map((item) => (
             <button
               key={item.id}
@@ -82,22 +104,22 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
           <button
             type="button"
             className="button button-primary"
-            title={`Zapisz plik ${jsonFileName(doc.fileName)}`}
+            title={t.result.downloadTitle(jsonFileName(doc.fileName))}
             onClick={() => {
               downloadResult(result);
             }}
           >
-            Pobierz JSON
+            {t.result.download}
           </button>
           <button type="button" className="button button-quiet" onClick={onNew}>
-            Analizuj kolejny plik
+            {t.result.analyseAnother}
           </button>
         </div>
       </div>
 
-      {meta && meta.warnings.length > 0 && (
-        <ul className="warnings" aria-label="Ostrzeżenia">
-          {meta.warnings.map((warning) => (
+      {warnings.length > 0 && (
+        <ul className="warnings" aria-label={t.result.warningsLabel}>
+          {warnings.map((warning) => (
             <li key={warning} className="notice notice-warn">
               {warning}
             </li>
@@ -113,20 +135,13 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
         className="result-grid"
       >
         <div className="result-main">
-          <section aria-labelledby={`${baseId}-summary`}>
-            <h2 id={`${baseId}-summary`} className="section-title">
-              Podsumowanie
-            </h2>
-            <p className="summary" lang={doc.language ?? undefined}>
-              {result.summary}
-            </p>
-          </section>
+          <SummarySection key={language} result={result} />
 
           <section aria-labelledby={`${baseId}-points`}>
             <h2 id={`${baseId}-points`} className="section-title">
-              Najważniejsze informacje
+              {t.result.keyPoints}
             </h2>
-            <ul className="key-points" lang={doc.language ?? undefined}>
+            <ul className="key-points" lang={docLang}>
               {result.keyPoints.map((point) => (
                 <li key={point}>{point}</li>
               ))}
@@ -135,71 +150,68 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
 
           <section aria-labelledby={`${baseId}-amounts`}>
             <h2 id={`${baseId}-amounts`} className="section-title">
-              Kwoty <span className="count">{result.amounts.length}</span>
+              {t.result.amounts} <span className="count">{result.amounts.length}</span>
             </h2>
-            <AmountsTable amounts={result.amounts} />
+            <AmountsTable amounts={result.amounts} lang={docLang} />
           </section>
 
           <section aria-labelledby={`${baseId}-dates`}>
             <h2 id={`${baseId}-dates`} className="section-title">
-              Terminy <span className="count">{result.dates.length}</span>
+              {t.result.dates} <span className="count">{result.dates.length}</span>
             </h2>
-            <DatesTimeline dates={result.dates} />
+            <DatesTimeline dates={result.dates} lang={docLang} />
           </section>
         </div>
 
         <aside className="result-side">
           <section aria-labelledby={`${baseId}-doc`} className="facts">
             <h2 id={`${baseId}-doc`} className="section-title">
-              Dokument
+              {t.result.document}
             </h2>
             <dl>
-              <dt>Plik</dt>
+              <dt>{t.result.file}</dt>
               <dd className="break">{doc.fileName}</dd>
-              <dt>Typ</dt>
-              <dd>{DOCUMENT_TYPE_LABELS[doc.type]}</dd>
-              <dt>Długość</dt>
-              <dd>{pluralPages(doc.pages)}</dd>
-              <dt>Język</dt>
+              <dt>{t.result.type}</dt>
+              <dd>{t.documentTypes[doc.type]}</dd>
+              <dt>{t.result.length}</dt>
+              <dd>{t.pages(doc.pages)}</dd>
+              <dt>{t.result.language}</dt>
               <dd>
-                {languageName(doc.language)}
+                {languageName(doc.language, locale) ?? t.result.unknownLanguage}
                 {doc.language && <span className="muted"> ({doc.language})</span>}
               </dd>
               {meta && (
                 <>
-                  <dt>Czas analizy</dt>
-                  <dd>{formatSeconds(meta.processingMs)}</dd>
+                  <dt>{t.result.analysisTime}</dt>
+                  <dd>{formatSeconds(meta.processingMs, locale)}</dd>
                   {meta.ocrPages.length > 0 && (
                     <>
-                      <dt>OCR</dt>
-                      <dd>
-                        {meta.ocrPages.length === 1 ? 'strona' : 'strony'}{' '}
-                        {meta.ocrPages.join(', ')}
-                      </dd>
+                      <dt>{t.result.ocr}</dt>
+                      <dd>{t.result.ocrPages(meta.ocrPages)}</dd>
                     </>
                   )}
-                  <dt>Model</dt>
+                  <dt>{t.result.model}</dt>
                   <dd className="break">{meta.model}</dd>
                 </>
               )}
             </dl>
           </section>
 
-          <EntityList title="Organizacje" items={result.entities.organizations} />
-          <EntityList title="Osoby" items={result.entities.people} />
+          <EntityList title={t.result.organizations} items={result.entities.organizations} />
+          <EntityList title={t.result.people} items={result.entities.people} />
 
           <section aria-labelledby={`${baseId}-keywords`}>
             <h2 id={`${baseId}-keywords`} className="section-title">
-              Słowa kluczowe
+              {t.result.keywords}
             </h2>
             {result.keywords.length > 0 ? (
-              <ul className="keywords">
+              <ul className="keywords" lang={docLang}>
                 {result.keywords.map((keyword) => (
                   <li key={keyword}>{keyword}</li>
                 ))}
               </ul>
             ) : (
-              <p className="muted">Brak.</p>
+              <p className="muted">{t.result.none}</p>
             )}
           </section>
         </aside>
@@ -218,6 +230,7 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
 }
 
 function EntityList({ title, items }: { title: string; items: string[] }) {
+  const { t } = useI18n();
   const id = useId();
   return (
     <section aria-labelledby={id}>
@@ -231,7 +244,7 @@ function EntityList({ title, items }: { title: string; items: string[] }) {
           ))}
         </ul>
       ) : (
-        <p className="muted">Nie wymieniono.</p>
+        <p className="muted">{t.result.notMentioned}</p>
       )}
     </section>
   );

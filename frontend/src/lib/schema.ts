@@ -47,6 +47,15 @@ export const dateItemSchema = z.object({
   context: text.nullable(),
 });
 
+export const NOTICE_CODES = ['PROMPT_INJECTION', 'UNREAD_PAGES', 'TRUNCATED'] as const;
+
+/** Machine-readable form of a warning, shown in the interface's language. */
+export const noticeSchema = z.object({
+  code: z.enum(NOTICE_CODES),
+  pages: z.array(z.number().int().min(1)).default([]),
+  percent: z.number().int().min(0).max(100).nullable().default(null),
+});
+
 /** Extra information added by this implementation (the brief allows additional fields). */
 export const metaSchema = z.object({
   model: z.string(),
@@ -54,6 +63,8 @@ export const metaSchema = z.object({
   ocrPages: z.array(z.number().int().min(1)),
   truncated: z.boolean(),
   warnings: z.array(z.string()),
+  /** Absent in results saved before warnings got codes. */
+  notices: z.array(noticeSchema).optional(),
   processingMs: z.number().int().min(0),
   /** Duration of each backend step (extract, ocr, analysis, merge). */
   stepsMs: z.record(z.string(), z.number().int().min(0)).optional(),
@@ -78,6 +89,7 @@ export type DocumentInfo = z.infer<typeof documentSchema>;
 export type Amount = z.infer<typeof amountSchema>;
 export type DateItem = z.infer<typeof dateItemSchema>;
 export type AnalysisMeta = z.infer<typeof metaSchema>;
+export type Notice = z.infer<typeof noticeSchema>;
 export type AnalysisResult = z.infer<typeof analysisResultSchema>;
 
 export type ParseOutcome =

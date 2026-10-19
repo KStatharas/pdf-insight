@@ -1,26 +1,39 @@
+import { z } from 'zod';
+
+import type { ApiErrorCode, Language } from '../i18n/messages';
 import { parseAnalysisResult, type AnalysisResult } from '../lib/schema';
 
 const DEFAULT_API_URL = 'http://localhost:8000';
 /** The backend gives the AI up to ~40 s per call (plus one retry); allow for that and the upload. */
 const ANALYZE_TIMEOUT_MS = 120_000;
 const HEALTH_TIMEOUT_MS = 70_000;
+const TRANSLATE_TIMEOUT_MS = 60_000;
 
 export const API_URL = (import.meta.env.VITE_API_URL ?? DEFAULT_API_URL).replace(/\/+$/, '');
 
-export class ApiError extends Error {
-  readonly code: string;
-  /** False when sending the same file again cannot help (wrong type, too large, no text). */
-  readonly retryable: boolean;
+const KNOWN_CODES = new Set<string>([
+  'NOT_A_PDF',
+  'FILE_TOO_LARGE',
+  'EMPTY_FILE',
+  'PDF_UNREADABLE',
+  'PDF_ENCRYPTED',
+  'PDF_NO_TEXT',
+  'TOO_MANY_PAGES',
+  'RATE_LIMITED',
+  'AI_NOT_CONFIGURED',
+  'AI_UNAVAILABLE',
+  'AI_TIMEOUT',
+  'AI_RATE_LIMITED',
+  'AI_INVALID_RESPONSE',
+  'AI_REFUSED',
+  'SERVER_BUSY',
+  'INTERNAL_ERROR',
+  'BAD_REQUEST',
+  'LENGTH_REQUIRED',
+] satisfies ApiErrorCode[]);
 
-  constructor(code: string, message: string, retryable: boolean) {
-    super(message);
-    this.name = 'ApiError';
-    this.code = code;
-    this.retryable = retryable;
-  }
-}
-
-const NOT_RETRYABLE = new Set([
+/** Sending the same file again cannot fix these. */
+const NOT_RETRYABLE = new Set<ApiErrorCode>([
   'NOT_A_PDF',
   'FILE_TOO_LARGE',
   'EMPTY_FILE',
@@ -31,6 +44,21 @@ const NOT_RETRYABLE = new Set([
   'AI_REFUSED',
 ]);
 
+export class ApiError extends Error {
+  readonly code: ApiErrorCode;
+  /** The server's own message (Polish). The interface shows its own text for the code. */
+  readonly serverMessage: string | null;
+  readonly retryable: boolean;
+
+  constructor(code: ApiErrorCode, serverMessage: string | null = null) {
+    super(serverMessage ?? code);
+    this.name = 'ApiError';
+    this.code = code;
+    this.serverMessage = serverMessage;
+    this.retryable = !NOT_RETRYABLE.has(code);
+  }
+}
+
 export type UploadPhase = 'upload' | 'analysis';
 
 export interface AnalyzeOptions {
@@ -39,51 +67,30 @@ export interface AnalyzeOptions {
   onUploadProgress?: (fraction: number) => void;
 }
 
-interface ErrorBody {
-  error: { code: string; message: string };
+const errorBodySchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+
+function parseJson(body: string): unknown {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return undefined;
+  }
 }
 
-function isErrorBody(value: unknown): value is ErrorBody {
-  if (typeof value !== 'object' || value === null || !('error' in value)) return false;
-  const error: unknown = value.error;
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    'message' in error &&
-    typeof error.code === 'string' &&
-    typeof error.message === 'string'
-  );
+function errorFromResponse(data: unknown): ApiError {
+  const parsed = errorBodySchema.safeParse(data);
+  if (!parsed.success) return new ApiError('HTTP_ERROR');
+  const { code, message } = parsed.data.error;
+  return new ApiError(KNOWN_CODES.has(code) ? (code as ApiErrorCode) : 'HTTP_ERROR', message);
 }
 
 /** Turns an HTTP status and body into a validated result or an `ApiError`. Exported for tests. */
 export function interpretResponse(status: number, body: string): AnalysisResult {
-  let data: unknown;
-  try {
-    data = JSON.parse(body);
-  } catch {
-    data = undefined;
-  }
-
-  if (status < 200 || status >= 300) {
-    if (isErrorBody(data)) {
-      throw new ApiError(data.error.code, data.error.message, !NOT_RETRYABLE.has(data.error.code));
-    }
-    throw new ApiError(
-      'HTTP_ERROR',
-      `Serwer zwrócił nieoczekiwany błąd (kod ${status}). Spróbuj ponownie.`,
-      true,
-    );
-  }
+  const data = parseJson(body);
+  if (status < 200 || status >= 300) throw errorFromResponse(data);
 
   const parsed = parseAnalysisResult(data);
-  if (!parsed.success) {
-    throw new ApiError(
-      'INVALID_RESULT',
-      'Odpowiedź serwera nie jest zgodna ze schematem wyniku. Spróbuj ponownie.',
-      true,
-    );
-  }
+  if (!parsed.success) throw new ApiError('INVALID_RESULT');
   return parsed.data;
 }
 
@@ -96,7 +103,7 @@ export function analyzePdf(file: File, options: AnalyzeOptions = {}): Promise<An
 
   return new Promise<AnalysisResult>((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new ApiError('ABORTED', 'Analizę anulowano.', true));
+      reject(new ApiError('ABORTED'));
       return;
     }
 
@@ -130,21 +137,15 @@ export function analyzePdf(file: File, options: AnalyzeOptions = {}): Promise<An
     });
     xhr.addEventListener('error', () => {
       cleanup();
-      reject(
-        new ApiError(
-          'NETWORK_ERROR',
-          'Nie udało się połączyć z serwerem. Sprawdź połączenie z internetem i spróbuj ponownie.',
-          true,
-        ),
-      );
+      reject(new ApiError('NETWORK_ERROR'));
     });
     xhr.addEventListener('timeout', () => {
       cleanup();
-      reject(new ApiError('TIMEOUT', 'Serwer nie odpowiedział na czas. Spróbuj ponownie.', true));
+      reject(new ApiError('TIMEOUT'));
     });
     xhr.addEventListener('abort', () => {
       cleanup();
-      reject(new ApiError('ABORTED', 'Analizę anulowano.', true));
+      reject(new ApiError('ABORTED'));
     });
 
     const form = new FormData();
@@ -152,6 +153,37 @@ export function analyzePdf(file: File, options: AnalyzeOptions = {}): Promise<An
     onPhase?.('upload');
     xhr.send(form);
   });
+}
+
+const translationSchema = z.object({ text: z.string().min(1), targetLanguage: z.string() });
+
+/** Translates a short text (the summary) into the interface language. */
+export async function translateText(
+  text: string,
+  targetLanguage: Language,
+  signal?: AbortSignal,
+): Promise<string> {
+  const timeout = AbortSignal.timeout(TRANSLATE_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/api/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, targetLanguage }),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+  } catch {
+    if (signal?.aborted) throw new ApiError('ABORTED');
+    throw new ApiError(timeout.aborted ? 'TIMEOUT' : 'NETWORK_ERROR');
+  }
+
+  const data = parseJson(await response.text());
+  if (!response.ok) throw errorFromResponse(data);
+  const parsed = translationSchema.safeParse(data);
+  if (!parsed.success || parsed.data.targetLanguage !== targetLanguage) {
+    throw new ApiError('INVALID_RESULT');
+  }
+  return parsed.data.text;
 }
 
 export type HealthStatus = 'ready' | 'not-configured' | 'offline';

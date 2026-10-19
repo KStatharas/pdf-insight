@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
 
 import type { HealthStatus } from '../api/client';
+import { useI18n } from '../i18n/context';
 import { MAX_FILE_MB } from '../lib/validateFile';
 
 interface UploadPanelProps {
@@ -12,6 +13,7 @@ interface UploadPanelProps {
 }
 
 export function UploadPanel({ error, health, onFile, onSample }: UploadPanelProps) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const errorId = useId();
@@ -38,11 +40,8 @@ export function UploadPanel({ error, health, onFile, onSample }: UploadPanelProp
   return (
     <section className="upload" aria-labelledby="upload-title">
       <div className="upload-intro">
-        <h1 id="upload-title">Streszczenie i dane z dokumentu PDF w kilkanaście sekund</h1>
-        <p className="lede">
-          Wgraj umowę, fakturę, ofertę albo raport. Dostaniesz krótkie podsumowanie, kwoty, terminy
-          i strony dokumentu oraz plik JSON do dalszej pracy.
-        </p>
+        <h1 id="upload-title">{t.upload.title}</h1>
+        <p className="lede">{t.upload.lede}</p>
       </div>
 
       <div
@@ -72,12 +71,12 @@ export function UploadPanel({ error, health, onFile, onSample }: UploadPanelProp
           <span className="sheet-line sheet-line-short" />
         </span>
         <span className="dropzone-title">
-          {dragging ? 'Upuść plik, aby rozpocząć analizę' : 'Przeciągnij tutaj plik PDF'}
+          {dragging ? t.upload.dropActive : t.upload.dropTitle}
         </span>
-        <span className="dropzone-or">albo</span>
-        <span className="button button-primary">Wybierz plik z dysku</span>
+        <span className="dropzone-or">{t.upload.or}</span>
+        <span className="button button-primary">{t.upload.choose}</span>
         <span id={hintId} className="dropzone-hint">
-          Tylko PDF, maksymalnie {MAX_FILE_MB} MB. Skany są odczytywane przez OCR.
+          {t.upload.hint(MAX_FILE_MB)}
         </span>
         <input
           ref={inputRef}
@@ -100,31 +99,22 @@ export function UploadPanel({ error, health, onFile, onSample }: UploadPanelProp
         </p>
       )}
 
-      {health === 'offline' && (
-        <p className="notice notice-warn">
-          Serwer analizy nie odpowiada. Jeśli był uśpiony, uruchomi się po pierwszym żądaniu —
-          możesz spróbować mimo to.
-        </p>
-      )}
+      {health === 'offline' && <p className="notice notice-warn">{t.upload.offline}</p>}
       {health === 'not-configured' && (
-        <p className="notice notice-warn">
-          Serwer działa, ale nie ma skonfigurowanego klucza usługi AI, więc analiza się nie uda.
-        </p>
+        <p className="notice notice-warn">{t.upload.notConfigured}</p>
       )}
 
       <p className="sample">
-        Nie masz pod ręką pliku?{' '}
+        {t.upload.samplePrompt}{' '}
         <button type="button" className="link-button" onClick={onSample}>
-          Przeanalizuj przykładową umowę
+          {t.upload.sampleButton}
         </button>{' '}
-        <span className="muted">(12 stron, w tym skan aneksu)</span>
+        <span className="muted">{t.upload.sampleNote}</span>
       </p>
 
-      <aside className="privacy" aria-label="Informacja o przetwarzaniu pliku">
+      <aside className="privacy" aria-label={t.upload.privacyLabel}>
         <p>
-          <strong>Twój plik trafia do usługi AI.</strong> Tekst dokumentu jest wysyłany do serwera
-          aplikacji, a stamtąd do modelu Google Gemini. Serwer nie zapisuje pliku. Nie wgrywaj
-          dokumentów, których nie możesz udostępnić zewnętrznemu dostawcy.
+          <strong>{t.upload.privacyStrong}</strong> {t.upload.privacy}
         </p>
       </aside>
     </section>

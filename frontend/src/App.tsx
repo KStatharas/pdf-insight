@@ -7,6 +7,8 @@ import { Header } from './components/Header';
 import { HistoryPanel } from './components/HistoryPanel';
 import { ResultView } from './components/ResultView';
 import { UploadPanel } from './components/UploadPanel';
+import { useI18n } from './i18n/context';
+import { apiErrorMessage, fileCheckMessage } from './i18n/errors';
 import {
   addToHistory,
   clearHistory,
@@ -15,13 +17,16 @@ import {
   type HistoryEntry,
 } from './lib/history';
 import type { AnalysisResult } from './lib/schema';
-import { checkFile } from './lib/validateFile';
+import { checkFile, type FileCheck } from './lib/validateFile';
 
 const SAMPLE_NAME = 'Test_PDF_Insight_umowa_14-2026.pdf';
 const SAMPLE_URL = `${import.meta.env.BASE_URL}samples/${SAMPLE_NAME}`;
 
+/** Problems are stored as data, not text, so they follow a later language change. */
+type UploadProblem = FileCheck | 'sampleFailed' | null;
+
 type View =
-  | { status: 'idle'; fileError: string | null }
+  | { status: 'idle'; problem: UploadProblem }
   | {
       status: 'working';
       file: File;
@@ -29,11 +34,12 @@ type View =
       progress: number;
       startedAt: number;
     }
-  | { status: 'error'; file: File; message: string; retryable: boolean }
+  | { status: 'error'; file: File; error: ApiError }
   | { status: 'done'; result: AnalysisResult; savedAt: string | null };
 
 export function App() {
-  const [view, setView] = useState<View>({ status: 'idle', fileError: null });
+  const { t, language, locale } = useI18n();
+  const [view, setView] = useState<View>({ status: 'idle', problem: null });
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [health, setHealth] = useState<HealthStatus | 'checking'>('checking');
@@ -66,7 +72,7 @@ export function App() {
   const analyze = useCallback(async (file: File) => {
     const check = await checkFile(file);
     if (!check.ok) {
-      setView({ status: 'idle', fileError: check.message });
+      setView({ status: 'idle', problem: check });
       return;
     }
 
@@ -90,18 +96,13 @@ export function App() {
       setView({ status: 'done', result, savedAt: null });
     } catch (error) {
       if (controller.signal.aborted) {
-        setView({ status: 'idle', fileError: null });
+        setView({ status: 'idle', problem: null });
         return;
       }
-      const apiError =
-        error instanceof ApiError
-          ? error
-          : new ApiError('UNKNOWN', 'Wystąpił nieoczekiwany błąd. Spróbuj ponownie.', true);
       setView({
         status: 'error',
         file,
-        message: apiError.message,
-        retryable: apiError.retryable,
+        error: error instanceof ApiError ? error : new ApiError('UNKNOWN'),
       });
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
@@ -109,19 +110,22 @@ export function App() {
   }, []);
 
   const analyzeSample = useCallback(async () => {
+    let file: File;
     try {
       const response = await fetch(SAMPLE_URL);
       if (!response.ok) throw new Error(String(response.status));
       const bytes = await response.arrayBuffer();
-      await analyze(new File([bytes], SAMPLE_NAME, { type: 'application/pdf' }));
+      file = new File([bytes], SAMPLE_NAME, { type: 'application/pdf' });
     } catch {
-      setView({ status: 'idle', fileError: 'Nie udało się pobrać przykładowej umowy.' });
+      setView({ status: 'idle', problem: 'sampleFailed' });
+      return;
     }
+    await analyze(file);
   }, [analyze]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
-    setView({ status: 'idle', fileError: null });
+    setView({ status: 'idle', problem: null });
   }, []);
 
   const openEntry = useCallback((entry: HistoryEntry) => {
@@ -130,10 +134,17 @@ export function App() {
     setView({ status: 'done', result: entry.result, savedAt: entry.savedAt });
   }, []);
 
+  const uploadError =
+    view.status !== 'idle' || view.problem === null
+      ? null
+      : view.problem === 'sampleFailed'
+        ? t.upload.sampleFailed
+        : fileCheckMessage(view.problem, t, locale);
+
   return (
     <div className="app">
       <a className="skip-link" href="#main">
-        Przejdź do treści
+        {t.skipLink}
       </a>
       <Header
         health={health}
@@ -165,7 +176,7 @@ export function App() {
       <main id="main" ref={mainRef} tabIndex={-1} className="main">
         {view.status === 'idle' && (
           <UploadPanel
-            error={view.fileError}
+            error={uploadError}
             health={health}
             onFile={(file) => {
               void analyze(file);
@@ -190,8 +201,8 @@ export function App() {
         {view.status === 'error' && (
           <ErrorPanel
             fileName={view.file.name}
-            message={view.message}
-            retryable={view.retryable}
+            message={apiErrorMessage(view.error, t, language)}
+            retryable={view.error.retryable}
             onRetry={() => {
               void analyze(view.file);
             }}
@@ -205,11 +216,7 @@ export function App() {
       </main>
 
       <footer className="footer">
-        <p>
-          PDF Insight · plik jest przesyłany do serwera aplikacji i usługi AI (Google Gemini)
-          wyłącznie w celu analizy i nie jest przechowywany. Historia analiz zostaje tylko w tej
-          przeglądarce.
-        </p>
+        <p>{t.footer}</p>
       </footer>
     </div>
   );

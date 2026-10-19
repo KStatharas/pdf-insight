@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { formatSize } from '../lib/validateFile';
+import { useI18n } from '../i18n/context';
+import { formatSize } from '../lib/format';
 
 interface AnalysisProgressProps {
   fileName: string;
@@ -20,6 +21,7 @@ export function AnalysisProgress({
   startedAt,
   onCancel,
 }: AnalysisProgressProps) {
+  const { t, locale } = useI18n();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -37,16 +39,18 @@ export function AnalysisProgress({
   return (
     <section className="progress" aria-labelledby="progress-title" aria-busy="true">
       <h1 id="progress-title" className="progress-title">
-        Analizuję dokument
+        {t.progress.title}
       </h1>
       <p className="progress-file">
-        {fileName} <span className="muted">({formatSize(fileSize)})</span>
+        {fileName} <span className="muted">({formatSize(fileSize, locale)})</span>
       </p>
 
       <ol className="steps">
         <li className={phase === 'upload' ? 'step is-active' : 'step is-done'}>
-          <span className="step-name">Wysyłanie pliku</span>
-          <span className="step-state">{phase === 'upload' ? `${uploadPercent}%` : 'gotowe'}</span>
+          <span className="step-name">{t.progress.upload}</span>
+          <span className="step-state">
+            {phase === 'upload' ? `${uploadPercent}%` : t.progress.done}
+          </span>
           <span className="bar" aria-hidden="true">
             <span
               className="bar-fill"
@@ -55,8 +59,10 @@ export function AnalysisProgress({
           </span>
         </li>
         <li className={phase === 'analysis' ? 'step is-active' : 'step'}>
-          <span className="step-name">Odczyt tekstu, OCR skanów i analiza AI</span>
-          <span className="step-state">{phase === 'analysis' ? 'w toku' : 'czeka'}</span>
+          <span className="step-name">{t.progress.analysis}</span>
+          <span className="step-state">
+            {phase === 'analysis' ? t.progress.running : t.progress.waiting}
+          </span>
           <span className="bar bar-indeterminate" aria-hidden="true">
             {phase === 'analysis' && <span className="bar-fill" />}
           </span>
@@ -64,14 +70,14 @@ export function AnalysisProgress({
       </ol>
 
       <p className="progress-time" aria-live="off">
-        Upłynęło {seconds} s. Zwykle trwa to 10–25 sekund.
+        {t.progress.elapsed(seconds)}
       </p>
       <p className="visually-hidden" role="status">
-        {phase === 'upload' ? 'Wysyłanie pliku' : 'Trwa analiza dokumentu'}
+        {phase === 'upload' ? t.progress.statusUpload : t.progress.statusAnalysis}
       </p>
 
       <button type="button" className="button button-quiet" onClick={onCancel}>
-        Anuluj
+        {t.progress.cancel}
       </button>
     </section>
   );

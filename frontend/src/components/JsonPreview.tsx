@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 
+import { useI18n } from '../i18n/context';
 import { resultToJson } from '../lib/download';
 import type { AnalysisResult } from '../lib/schema';
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
+/** Always shows the result as it was analysed, regardless of the interface language. */
 export function JsonPreview({ result }: { result: AnalysisResult }) {
+  const { t } = useI18n();
   const [copy, setCopy] = useState<CopyState>('idle');
   const json = resultToJson(result);
 
@@ -28,13 +31,13 @@ export function JsonPreview({ result }: { result: AnalysisResult }) {
     }
   };
 
+  const copyLabel =
+    copy === 'copied' ? t.json.copied : copy === 'failed' ? t.json.copyFailed : t.json.copy;
+
   return (
     <div className="json">
       <div className="json-head">
-        <p className="muted">
-          Wynik zgodny ze schematem z briefu, sprawdzony przed wyświetleniem. Pole <code>meta</code>{' '}
-          zawiera dodatkowe informacje o przebiegu analizy.
-        </p>
+        <p className="muted">{t.json.note}</p>
         <button
           type="button"
           className="button button-quiet"
@@ -42,14 +45,10 @@ export function JsonPreview({ result }: { result: AnalysisResult }) {
             void onCopy();
           }}
         >
-          {copy === 'copied'
-            ? 'Skopiowano'
-            : copy === 'failed'
-              ? 'Nie udało się skopiować'
-              : 'Kopiuj JSON'}
+          {copyLabel}
         </button>
       </div>
-      <pre className="json-code" tabIndex={0} aria-label="Podgląd JSON">
+      <pre className="json-code" tabIndex={0} aria-label={t.json.previewLabel}>
         <code>{json}</code>
       </pre>
     </div>

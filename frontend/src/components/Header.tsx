@@ -1,11 +1,8 @@
-import type { HealthStatus } from '../api/client';
+import { useId } from 'react';
 
-const HEALTH_LABELS: Record<HealthStatus | 'checking', string> = {
-  checking: 'Łączenie z serwerem…',
-  ready: 'Serwer gotowy',
-  'not-configured': 'Serwer bez konfiguracji AI',
-  offline: 'Serwer niedostępny',
-};
+import type { HealthStatus } from '../api/client';
+import { useI18n } from '../i18n/context';
+import { isLanguage, LANGUAGE_NAMES, LANGUAGES } from '../i18n/messages';
 
 interface HeaderProps {
   health: HealthStatus | 'checking';
@@ -22,6 +19,9 @@ export function Header({
   onToggleHistory,
   onHome,
 }: HeaderProps) {
+  const { t, language, setLanguage } = useI18n();
+  const languageId = useId();
+
   return (
     <header className="header">
       <button type="button" className="wordmark" onClick={onHome}>
@@ -31,8 +31,27 @@ export function Header({
       <div className="header-actions">
         <p className={`health health-${health}`} role="status">
           <span className="health-dot" aria-hidden="true" />
-          {HEALTH_LABELS[health]}
+          {t.header.health[health]}
         </p>
+        <div className="language">
+          <label htmlFor={languageId} className="language-label">
+            {t.languageLabel}
+          </label>
+          <select
+            id={languageId}
+            className="language-select"
+            value={language}
+            onChange={(event) => {
+              if (isLanguage(event.target.value)) setLanguage(event.target.value);
+            }}
+          >
+            {LANGUAGES.map((code) => (
+              <option key={code} value={code} lang={code}>
+                {LANGUAGE_NAMES[code]}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="button"
           className="button button-quiet"
@@ -40,7 +59,8 @@ export function Header({
           aria-controls="history"
           onClick={onToggleHistory}
         >
-          Historia{historyCount > 0 ? ` (${historyCount})` : ''}
+          {t.header.history}
+          {historyCount > 0 ? ` (${historyCount})` : ''}
         </button>
       </div>
     </header>

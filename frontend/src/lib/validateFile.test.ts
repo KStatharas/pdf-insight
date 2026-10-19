@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkFile, checkFileBasics, formatSize, MAX_FILE_BYTES } from './validateFile';
+import { formatSize } from './format';
+import { checkFile, checkFileBasics, MAX_FILE_BYTES } from './validateFile';
 
 function file(content: BlobPart[], name: string, type = 'application/pdf'): File {
   return new File(content, name, { type });
@@ -24,8 +25,7 @@ describe('checkFileBasics', () => {
 
   it('rejects other file types', () => {
     const check = checkFileBasics(file(['hello'], 'notatki.docx', 'application/msword'));
-    expect(check.ok).toBe(false);
-    expect(check.ok ? '' : check.message).toContain('nie jest plik PDF');
+    expect(check).toMatchObject({ ok: false, problem: 'notPdf' });
   });
 
   it('rejects empty files', () => {
@@ -35,8 +35,7 @@ describe('checkFileBasics', () => {
   it('accepts exactly 10 MB and rejects anything larger', () => {
     expect(checkFileBasics(sizedFile('a.pdf', MAX_FILE_BYTES)).ok).toBe(true);
     const tooBig = checkFileBasics(sizedFile('b.pdf', MAX_FILE_BYTES + 1));
-    expect(tooBig.ok).toBe(false);
-    expect(tooBig.ok ? '' : tooBig.message).toContain('10 MB');
+    expect(tooBig).toMatchObject({ ok: false, problem: 'tooLarge', size: MAX_FILE_BYTES + 1 });
   });
 });
 
@@ -47,7 +46,7 @@ describe('checkFile', () => {
 
   it('rejects a renamed file without the PDF signature', async () => {
     const check = await checkFile(file(['PK\u0003\u0004 zip'], 'archiwum.pdf'));
-    expect(check.ok).toBe(false);
+    expect(check).toMatchObject({ ok: false, problem: 'badSignature' });
   });
 });
 
