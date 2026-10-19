@@ -1,0 +1,19 @@
+# The free Render instance sleeps after 15 minutes without traffic and needs up to a minute to
+# wake up, which would break the "results in under 30 seconds" goal for the first visitor.
+# A light health check every 10 minutes keeps it awake.
+name: Keep backend warm
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: vars.VITE_API_URL != ''
+    steps:
+      - name: Ping /api/health
+        run: curl --fail --silent --show-error --max-time 90 --retry 2 "${{ vars.VITE_API_URL }}/api/health"

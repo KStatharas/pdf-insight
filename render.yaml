@@ -1,0 +1,17 @@
+# Render Blueprint for the backend (https://render.com/docs/blueprint-spec).
+# New > Blueprint > pick this repository; Render asks for LLM_API_KEY during setup.
+services:
+  - type: web
+    name: pdf-insight-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: LLM_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://kstatharas.github.io
