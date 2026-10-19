@@ -83,7 +83,10 @@ def create_app(settings: Settings | None = None, chat: ChatModel | None = None) 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(request: Request, _: RequestValidationError) -> JSONResponse:
         if request.url.path == "/api/translate":
-            message = "Niepoprawne żądanie tłumaczenia (tekst do 6000 znaków, język pl lub en)."
+            message = (
+                "Niepoprawne żądanie tłumaczenia (od 1 do 120 tekstów, łącznie do 30 000 znaków, "
+                "język pl lub en)."
+            )
         else:
             message = "Nie przesłano pliku PDF w polu formularza „file”."
         return _error_response(AppError("BAD_REQUEST", message, 400))
@@ -159,7 +162,7 @@ def create_app(settings: Settings | None = None, chat: ChatModel | None = None) 
                 "AI_NOT_CONFIGURED", "Usługa AI nie jest skonfigurowana na serwerze.", 503
             )
         try:
-            text = await analyzer.translate(body.text, body.target_language)
+            texts = await analyzer.translate(body.texts, body.target_language)
         except AppError:
             raise
         except Exception as exc:
@@ -167,7 +170,7 @@ def create_app(settings: Settings | None = None, chat: ChatModel | None = None) 
             raise AppError(
                 "INTERNAL_ERROR", "Wystąpił nieoczekiwany błąd serwera. Spróbuj ponownie.", 500
             ) from exc
-        return TranslateResponse(text=text, target_language=body.target_language)
+        return TranslateResponse(texts=texts, target_language=body.target_language)
 
     return app
 

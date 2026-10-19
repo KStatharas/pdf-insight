@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { sampleResult } from '../test/fixtures';
-import { ApiError, interpretResponse, translateText } from './client';
+import { ApiError, interpretResponse, translateTexts } from './client';
 
 function catchError(fn: () => unknown): ApiError {
   try {
@@ -53,30 +53,36 @@ describe('interpretResponse', () => {
   });
 });
 
-describe('translateText', () => {
+describe('translateTexts', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('posts the text and returns the validated translation', async () => {
+  it('posts all texts and returns the validated translations', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(
-        new Response(JSON.stringify({ text: 'The contract.', targetLanguage: 'en' })),
+        new Response(JSON.stringify({ texts: ['The contract.', 'Go-live'], targetLanguage: 'en' })),
       );
 
-    await expect(translateText('Umowa.', 'en')).resolves.toBe('The contract.');
+    await expect(translateTexts(['Umowa.', 'Go-live'], 'en')).resolves.toEqual([
+      'The contract.',
+      'Go-live',
+    ]);
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(typeof url === 'string' ? url : '').toMatch(/\/api\/translate$/);
     expect(init?.method).toBe('POST');
-    expect(init?.body).toBe(JSON.stringify({ text: 'Umowa.', targetLanguage: 'en' }));
+    expect(init?.body).toBe(JSON.stringify({ texts: ['Umowa.', 'Go-live'], targetLanguage: 'en' }));
   });
 
-  it('rejects a reply for another language', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ text: 'Umowa.', targetLanguage: 'pl' })),
-    );
-    await expect(translateText('Umowa.', 'en')).rejects.toMatchObject({ code: 'INVALID_RESULT' });
+  it('rejects a reply for another language or with a different number of texts', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ texts: ['a'], targetLanguage: 'pl' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ texts: ['a'], targetLanguage: 'en' })));
+    await expect(translateTexts(['a'], 'en')).rejects.toMatchObject({ code: 'INVALID_RESULT' });
+    await expect(translateTexts(['a', 'b'], 'en')).rejects.toMatchObject({
+      code: 'INVALID_RESULT',
+    });
   });
 
   it('turns server errors and network failures into ApiError', async () => {
@@ -88,7 +94,7 @@ describe('translateText', () => {
       )
       .mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-    await expect(translateText('a', 'en')).rejects.toMatchObject({ code: 'RATE_LIMITED' });
-    await expect(translateText('a', 'en')).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+    await expect(translateTexts(['a'], 'en')).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+    await expect(translateTexts(['a'], 'en')).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
   });
 });

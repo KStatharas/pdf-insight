@@ -32,9 +32,9 @@ from app.schemas import (
     Entities,
     LlmAnalysis,
     LlmOverview,
-    LlmTranslation,
     Notice,
     TargetLanguage,
+    translations_model,
     unique_strings,
 )
 
@@ -160,11 +160,14 @@ class Analyzer:
             ),
         )
 
-    async def translate(self, text: str, target_language: TargetLanguage) -> str:
+    async def translate(self, texts: list[str], target_language: TargetLanguage) -> list[str]:
         reply = await self._complete_validated(
-            translate_messages(text, target_language), LlmTranslation, TRANSLATE_JSON_SCHEMA
+            translate_messages(texts, target_language),
+            translations_model(len(texts)),
+            TRANSLATE_JSON_SCHEMA,
         )
-        return reply.text
+        translated: list[str] = reply.model_dump()["texts"]
+        return translated
 
     async def _analyze_chunk(
         self, text: str, images: list[PageImage], part: int, total: int

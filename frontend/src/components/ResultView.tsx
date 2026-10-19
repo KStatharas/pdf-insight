@@ -1,14 +1,15 @@
 import { useId, useState } from 'react';
 
 import { useI18n } from '../i18n/context';
+import { apiErrorMessage } from '../i18n/errors';
 import type { Messages } from '../i18n/messages';
 import { downloadResult, jsonFileName } from '../lib/download';
 import { formatIsoDate, formatSeconds, formatTimestamp, languageName } from '../lib/format';
 import type { AnalysisMeta, AnalysisResult } from '../lib/schema';
+import { useTranslatedResult } from '../lib/useTranslatedResult';
 import { AmountsTable } from './AmountsTable';
 import { DatesTimeline } from './DatesTimeline';
 import { JsonPreview } from './JsonPreview';
-import { SummarySection } from './SummarySection';
 
 interface ResultViewProps {
   result: AnalysisResult;
@@ -41,6 +42,10 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
   const { document: doc, meta } = result;
   // Values written by the model stay in the document's language; mark them for screen readers.
   const docLang = doc.language ?? undefined;
+  // Summary, key points and descriptions follow the interface language (display only).
+  const { texts, status, retry } = useTranslatedResult(result, language);
+  const textLang = status.status === 'translated' ? language : docLang;
+  const pending = status.status === 'loading';
   const warnings = meta ? warningTexts(meta, t) : [];
 
   const tabs: { id: Tab; label: string }[] = [
@@ -135,31 +140,62 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
         className="result-grid"
       >
         <div className="result-main">
-          <SummarySection key={language} result={result} />
+          {pending && (
+            <p className="visually-hidden" role="status">
+              {t.translation.translating}
+            </p>
+          )}
+          {status.status === 'failed' && (
+            <p className="notice notice-warn" role="alert">
+              {t.translation.failed} {apiErrorMessage(status.error, t, language)}{' '}
+              <button type="button" className="link-button" onClick={retry}>
+                {t.translation.retry}
+              </button>
+            </p>
+          )}
 
-          <section aria-labelledby={`${baseId}-points`}>
+          <section aria-labelledby={`${baseId}-summary`} aria-busy={pending}>
+            <h2 id={`${baseId}-summary`} className="section-title">
+              {t.result.summary}
+            </h2>
+            <p className={`summary${pending ? ' is-pending' : ''}`} lang={textLang}>
+              {texts.summary}
+            </p>
+          </section>
+
+          <section aria-labelledby={`${baseId}-points`} aria-busy={pending}>
             <h2 id={`${baseId}-points`} className="section-title">
               {t.result.keyPoints}
             </h2>
-            <ul className="key-points" lang={docLang}>
-              {result.keyPoints.map((point) => (
-                <li key={point}>{point}</li>
+            <ul className={`key-points${pending ? ' is-pending' : ''}`} lang={textLang}>
+              {texts.keyPoints.map((point, index) => (
+                <li key={`${String(index)}-${point}`}>{point}</li>
               ))}
             </ul>
           </section>
 
-          <section aria-labelledby={`${baseId}-amounts`}>
+          <section aria-labelledby={`${baseId}-amounts`} aria-busy={pending}>
             <h2 id={`${baseId}-amounts`} className="section-title">
               {t.result.amounts} <span className="count">{result.amounts.length}</span>
             </h2>
-            <AmountsTable amounts={result.amounts} lang={docLang} />
+            <AmountsTable
+              amounts={result.amounts}
+              contexts={texts.amountContexts}
+              lang={textLang}
+              pending={pending}
+            />
           </section>
 
-          <section aria-labelledby={`${baseId}-dates`}>
+          <section aria-labelledby={`${baseId}-dates`} aria-busy={pending}>
             <h2 id={`${baseId}-dates`} className="section-title">
               {t.result.dates} <span className="count">{result.dates.length}</span>
             </h2>
-            <DatesTimeline dates={result.dates} lang={docLang} />
+            <DatesTimeline
+              dates={result.dates}
+              contexts={texts.dateContexts}
+              lang={textLang}
+              pending={pending}
+            />
           </section>
         </div>
 

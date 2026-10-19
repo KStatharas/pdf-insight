@@ -2,7 +2,15 @@ import datetime as dt
 import re
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    create_model,
+    model_validator,
+)
 from pydantic.alias_generators import to_camel
 
 DocumentType = Literal["faktura", "umowa", "oferta", "raport", "inne"]
@@ -188,18 +196,37 @@ class AnalysisResult(CamelModel):
     meta: AnalysisMeta
 
 
+MAX_TRANSLATE_ITEMS = 120
+MAX_TRANSLATE_CHARS = 30_000
+
+TranslateItem = Annotated[str, Field(min_length=1, max_length=6000)]
+
+
 class TranslateRequest(CamelModel):
-    text: str = Field(min_length=1, max_length=6000)
+    """Texts from one analysis (summary, key points, contexts), translated in a single call."""
+
+    texts: list[TranslateItem] = Field(min_length=1, max_length=MAX_TRANSLATE_ITEMS)
     target_language: TargetLanguage
+
+    @model_validator(mode="after")
+    def _check_total_size(self) -> "TranslateRequest":
+        if sum(len(text) for text in self.texts) > MAX_TRANSLATE_CHARS:
+            raise ValueError(f"texts are longer than {MAX_TRANSLATE_CHARS} characters in total")
+        return self
 
 
 class TranslateResponse(CamelModel):
-    text: str
+    texts: list[str]
     target_language: TargetLanguage
 
 
-class LlmTranslation(CamelModel):
-    text: str = Field(min_length=1, max_length=12000)
+def translations_model(count: int) -> type[BaseModel]:
+    """Model of the AI reply: exactly `count` non-empty translations (wrong counts are retried)."""
+    item = Annotated[str, Field(min_length=1, max_length=12_000)]
+    return create_model(
+        "LlmTranslations",
+        texts=(Annotated[list[item], Field(min_length=count, max_length=count)], ...),
+    )
 
 
 class ErrorBody(BaseModel):

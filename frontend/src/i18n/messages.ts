@@ -166,12 +166,8 @@ const pl = {
     unknownLanguage: 'nieznany',
   },
   translation: {
-    translating: 'Tłumaczę podsumowanie…',
-    translatedFrom: (language: string) =>
-      `Podsumowanie przetłumaczone automatycznie z języka: ${language}. Pozostałe dane i plik JSON są w języku dokumentu.`,
-    showOriginal: 'Pokaż oryginał',
-    showTranslation: 'Pokaż tłumaczenie',
-    failed: 'Nie udało się przetłumaczyć podsumowania. Wyświetlam oryginał.',
+    translating: 'Tłumaczę wyniki…',
+    failed: 'Nie udało się przetłumaczyć wyników.',
     retry: 'Spróbuj ponownie',
   },
   notices: {
@@ -347,12 +343,8 @@ const en: Messages = {
     unknownLanguage: 'unknown',
   },
   translation: {
-    translating: 'Translating the summary…',
-    translatedFrom: (language: string) =>
-      `Summary translated automatically from ${language}. The other data and the JSON file stay in the document's language.`,
-    showOriginal: 'Show original',
-    showTranslation: 'Show translation',
-    failed: 'The summary could not be translated. Showing the original.',
+    translating: 'Translating the results…',
+    failed: 'The results could not be translated.',
     retry: 'Try again',
   },
   notices: {

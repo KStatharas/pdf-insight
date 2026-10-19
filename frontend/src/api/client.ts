@@ -155,21 +155,27 @@ export function analyzePdf(file: File, options: AnalyzeOptions = {}): Promise<An
   });
 }
 
-const translationSchema = z.object({ text: z.string().min(1), targetLanguage: z.string() });
+const translationSchema = z.object({
+  texts: z.array(z.string().min(1)),
+  targetLanguage: z.string(),
+});
 
-/** Translates a short text (the summary) into the interface language. */
-export async function translateText(
-  text: string,
+/**
+ * Translates texts from one analysis (summary, key points, descriptions) into the interface
+ * language in a single request. The reply must contain one translation per text, in order.
+ */
+export async function translateTexts(
+  texts: string[],
   targetLanguage: Language,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<string[]> {
   const timeout = AbortSignal.timeout(TRANSLATE_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch(`${API_URL}/api/translate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, targetLanguage }),
+      body: JSON.stringify({ texts, targetLanguage }),
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
   } catch {
@@ -180,10 +186,14 @@ export async function translateText(
   const data = parseJson(await response.text());
   if (!response.ok) throw errorFromResponse(data);
   const parsed = translationSchema.safeParse(data);
-  if (!parsed.success || parsed.data.targetLanguage !== targetLanguage) {
+  if (
+    !parsed.success ||
+    parsed.data.targetLanguage !== targetLanguage ||
+    parsed.data.texts.length !== texts.length
+  ) {
     throw new ApiError('INVALID_RESULT');
   }
-  return parsed.data.text;
+  return parsed.data.texts;
 }
 
 export type HealthStatus = 'ready' | 'not-configured' | 'offline';

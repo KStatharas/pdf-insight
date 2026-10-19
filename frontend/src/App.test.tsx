@@ -2,19 +2,19 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { analyzePdf, ApiError, checkHealth, translateText } from './api/client';
+import { analyzePdf, ApiError, checkHealth, translateTexts } from './api/client';
 import { App } from './App';
 import { I18nProvider, LANGUAGE_KEY } from './i18n/I18nProvider';
-import { clearTranslationMemory } from './lib/useTranslatedSummary';
+import { clearTranslationMemory } from './lib/useTranslatedResult';
 import { sampleResult } from './test/fixtures';
 
 vi.mock('./api/client', async (importOriginal) => {
   const original = await importOriginal<typeof import('./api/client')>();
-  return { ...original, analyzePdf: vi.fn(), checkHealth: vi.fn(), translateText: vi.fn() };
+  return { ...original, analyzePdf: vi.fn(), checkHealth: vi.fn(), translateTexts: vi.fn() };
 });
 
 const analyzeMock = vi.mocked(analyzePdf);
-const translateMock = vi.mocked(translateText);
+const translateMock = vi.mocked(translateTexts);
 
 function renderApp() {
   return render(
@@ -132,9 +132,14 @@ describe('App', () => {
     expect(await screen.findByText(/z historii/)).toBeInTheDocument();
   });
 
-  it('switches the interface to English and translates only the displayed summary', async () => {
+  /** Fake translation: prefixes every text, so the test can see what was translated. */
+  function englishOf(texts: string[]): string[] {
+    return texts.map((text) => `EN ${text}`);
+  }
+
+  it('switches to English and translates summary, key points, amounts and dates', async () => {
     analyzeMock.mockResolvedValue(sampleResult());
-    translateMock.mockResolvedValue('The framework agreement covers CRM deployment.');
+    translateMock.mockImplementation((texts) => Promise.resolve(englishOf(texts)));
     const user = userEvent.setup();
     renderApp();
     await user.upload(screen.getByTestId('file-input'), pdf());
@@ -146,51 +151,62 @@ describe('App', () => {
     expect(document.documentElement.lang).toBe('en');
     expect(localStorage.getItem(LANGUAGE_KEY)).toBe('en');
     expect(screen.getByRole('button', { name: 'Download JSON' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Key points' })).toBeInTheDocument();
-    const summary = await screen.findByText('The framework agreement covers CRM deployment.');
-    expect(summary).toHaveAttribute('lang', 'en');
-    expect(screen.getByText(/Summary translated automatically from Polish/)).toBeInTheDocument();
-    expect(translateMock).toHaveBeenCalledWith(sampleResult().summary, 'en', expect.anything());
 
-    // The original is one click away, and the JSON keeps the document's language.
-    await user.click(screen.getByRole('button', { name: 'Show original' }));
-    expect(
-      screen.getByText(/dotyczy wdrożenia i utrzymania systemu CRM/, { selector: '.summary' }),
-    ).toHaveAttribute('lang', 'pl');
+    const result = sampleResult();
+    const summary = await screen.findByText(`EN ${result.summary}`);
+    expect(summary).toHaveAttribute('lang', 'en');
+    const panel = within(screen.getByRole('tabpanel', { name: 'Results' }));
+    for (const point of result.keyPoints)
+      expect(panel.getByText(`EN ${point}`)).toBeInTheDocument();
+    expect(panel.getByText('EN wynagrodzenie za wdrożenie netto')).toBeInTheDocument();
+    expect(panel.getByText('EN planowany Go-live')).toBeInTheDocument();
+    expect(panel.getByText('184,500.00')).toBeInTheDocument();
+    // One request for everything, no notes or links about the translation.
+    expect(translateMock).toHaveBeenCalledTimes(1);
+    expect(translateMock.mock.calls[0]?.[0]).toHaveLength(
+      1 + result.keyPoints.length + result.amounts.length + result.dates.length,
+    );
+    expect(screen.queryByText(/translated automatically/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /original/i })).not.toBeInTheDocument();
+
+    // The JSON keeps the document's language.
     await user.click(screen.getByRole('tab', { name: 'JSON' }));
     const json = screen.getByLabelText('JSON preview');
     expect(json).toHaveTextContent('dotyczy wdrożenia i utrzymania systemu CRM');
-    expect(json).not.toHaveTextContent('The framework agreement');
+    expect(json).not.toHaveTextContent('EN ');
 
-    // Back to Polish: the original summary, no further request.
+    // Back to Polish: the originals, no further request.
     await user.selectOptions(screen.getByLabelText('Language'), 'pl');
     await user.click(screen.getByRole('tab', { name: 'Wyniki' }));
-    expect(screen.getByRole('heading', { name: 'Najważniejsze informacje' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/dotyczy wdrożenia i utrzymania systemu CRM/, { selector: '.summary' }),
+    ).toHaveAttribute('lang', 'pl');
+    expect(screen.getByText('planowany Go-live')).toBeInTheDocument();
     expect(translateMock).toHaveBeenCalledTimes(1);
   });
 
   it('reuses a translation when the language is selected again', async () => {
     analyzeMock.mockResolvedValue(sampleResult());
-    translateMock.mockResolvedValue('Translated summary.');
+    translateMock.mockImplementation((texts) => Promise.resolve(englishOf(texts)));
     const user = userEvent.setup();
     renderApp();
     await user.upload(screen.getByTestId('file-input'), pdf());
     await screen.findByRole('heading', { name: /Umowa ramowa/ });
 
     await user.selectOptions(screen.getByLabelText('Język'), 'en');
-    await screen.findByText('Translated summary.');
+    await screen.findByText(`EN ${sampleResult().summary}`);
     await user.selectOptions(screen.getByLabelText('Language'), 'pl');
     await user.selectOptions(screen.getByLabelText('Język'), 'en');
 
-    expect(await screen.findByText('Translated summary.')).toBeInTheDocument();
+    expect(await screen.findByText(`EN ${sampleResult().summary}`)).toBeInTheDocument();
     expect(translateMock).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the original summary when the translation fails', async () => {
+  it('keeps the original texts when the translation fails', async () => {
     analyzeMock.mockResolvedValue(sampleResult());
     translateMock
       .mockRejectedValueOnce(new ApiError('AI_UNAVAILABLE', 'Niedostępna.'))
-      .mockResolvedValueOnce('Translated on retry.');
+      .mockImplementationOnce((texts) => Promise.resolve(englishOf(texts)));
     const user = userEvent.setup();
     renderApp();
     await user.upload(screen.getByTestId('file-input'), pdf());
@@ -198,13 +214,14 @@ describe('App', () => {
 
     await user.selectOptions(screen.getByLabelText('Język'), 'en');
 
-    expect(await screen.findByText(/The summary could not be translated/)).toBeInTheDocument();
+    expect(await screen.findByText(/The results could not be translated/)).toBeInTheDocument();
     expect(screen.getByText(/The AI service is temporarily unavailable/)).toBeInTheDocument();
     expect(
       screen.getByText(/dotyczy wdrożenia i utrzymania systemu CRM/, { selector: '.summary' }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('Translated on retry.')).toBeInTheDocument();
+    expect(await screen.findByText(`EN ${sampleResult().summary}`)).toBeInTheDocument();
+    expect(screen.queryByText(/could not be translated/)).not.toBeInTheDocument();
   });
 
   it('shows errors and file problems in the selected language', async () => {
