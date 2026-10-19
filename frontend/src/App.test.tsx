@@ -164,8 +164,11 @@ describe('App', () => {
     // One request for everything, no notes or links about the translation.
     expect(translateMock).toHaveBeenCalledTimes(1);
     expect(translateMock.mock.calls[0]?.[0]).toHaveLength(
-      1 + result.keyPoints.length + result.amounts.length + result.dates.length,
+      2 + result.keyPoints.length + result.amounts.length + result.dates.length,
     );
+    expect(
+      screen.getByRole('heading', { level: 1, name: `EN ${String(result.document.title)}` }),
+    ).toHaveAttribute('lang', 'en');
     expect(screen.queryByText(/translated automatically/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /original/i })).not.toBeInTheDocument();
 

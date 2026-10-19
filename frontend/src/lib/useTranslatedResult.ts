@@ -4,11 +4,13 @@ import { ApiError, translateTexts } from '../api/client';
 import type { Language } from '../i18n/messages';
 import type { AnalysisResult } from './schema';
 
-export const TRANSLATION_CACHE_KEY = 'pdf-insight:translations:v2';
+export const TRANSLATION_CACHE_KEY = 'pdf-insight:translations:v3';
 const CACHE_LIMIT = 20;
 
 /** The texts of a result that are shown in the interface language. */
 export interface DisplayTexts {
+  /** `null` when the document has no title (the file name is shown and never translated). */
+  title: string | null;
   summary: string;
   keyPoints: string[];
   /** Same order as `result.amounts`; `null` where the amount has no description. */
@@ -26,6 +28,7 @@ export type TranslationStatus =
 
 export function originalTexts(result: AnalysisResult): DisplayTexts {
   return {
+    title: result.document.title,
     summary: result.summary,
     keyPoints: result.keyPoints,
     amountContexts: result.amounts.map((amount) => amount.context),
@@ -33,9 +36,10 @@ export function originalTexts(result: AnalysisResult): DisplayTexts {
   };
 }
 
-/** Flattens the texts into one list for a single request (descriptions that are null skipped). */
+/** Flattens the texts into one list for a single request (missing title/descriptions skipped). */
 export function flattenTexts(texts: DisplayTexts): string[] {
   return [
+    ...(texts.title === null ? [] : [texts.title]),
     texts.summary,
     ...texts.keyPoints,
     ...texts.amountContexts.filter((context): context is string => context !== null),
@@ -52,6 +56,7 @@ export function unflattenTexts(
   const next = (): string => translations[index++] ?? '';
   const nextOrNull = (context: string | null): string | null => (context === null ? null : next());
   return {
+    title: nextOrNull(original.title),
     summary: next(),
     keyPoints: original.keyPoints.map(next),
     amountContexts: original.amountContexts.map(nextOrNull),
