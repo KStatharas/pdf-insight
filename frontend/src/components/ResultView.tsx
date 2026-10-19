@@ -172,7 +172,10 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
                   {meta.ocrPages.length > 0 && (
                     <>
                       <dt>OCR</dt>
-                      <dd>strony {meta.ocrPages.join(', ')}</dd>
+                      <dd>
+                        {meta.ocrPages.length === 1 ? 'strona' : 'strony'}{' '}
+                        {meta.ocrPages.join(', ')}
+                      </dd>
                     </>
                   )}
                   <dt>Model</dt>
