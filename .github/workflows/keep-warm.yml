@@ -1,11 +1,16 @@
 # The free Render instance sleeps after 15 minutes without traffic and needs up to a minute to
 # wake up, which would break the "results in under 30 seconds" goal for the first visitor.
-# A light health check every 10 minutes keeps it awake.
+# A light health check every 10 minutes keeps it awake. The minutes are offset from :00 because
+# GitHub delays or drops scheduled runs at the top of the hour; a push of this file runs it once
+# straight away so a change is verified immediately.
 name: Keep backend warm
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '4,14,24,34,44,54 * * * *'
+  push:
+    branches: [main]
+    paths: [.github/workflows/keep-warm.yml]
   workflow_dispatch:
 
 permissions: {}
