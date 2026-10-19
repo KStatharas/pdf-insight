@@ -55,6 +55,8 @@ export const metaSchema = z.object({
   truncated: z.boolean(),
   warnings: z.array(z.string()),
   processingMs: z.number().int().min(0),
+  /** Duration of each backend step (extract, ocr, analysis, merge). */
+  stepsMs: z.record(z.string(), z.number().int().min(0)).optional(),
 });
 
 export const analysisResultSchema = z.object({

@@ -60,7 +60,11 @@ class Analyzer:
             max_ocr_pages=settings.ocr_max_pages if settings.ocr_enabled else 0,
         )
 
+        steps: dict[str, int] = {"extract": _ms_since(started)}
+        step_started = time.perf_counter()
         ocr_texts = await self._ocr(extracted.images)
+        if extracted.images:
+            steps["ocr"] = _ms_since(step_started)
         pages = [PageText(p.number, ocr_texts.get(p.number, p.text)) for p in extracted.pages]
         full_text = "\n".join(p.text for p in pages)
         if len(full_text.strip()) < _MIN_DOCUMENT_CHARS:
@@ -91,24 +95,29 @@ class Analyzer:
             )
 
         total = len(chunks.texts)
+        step_started = time.perf_counter()
         partials = list(
             await asyncio.gather(
                 *(self._analyze_chunk(text, i, total) for i, text in enumerate(chunks.texts, 1))
             )
         )
+        steps["analysis"] = _ms_since(step_started)
         overview: LlmOverview = partials[0]
         if total > 1:
+            step_started = time.perf_counter()
             overview = await self._complete_validated(
                 merge_messages(partials), LlmOverview, OVERVIEW_JSON_SCHEMA
             )
+            steps["merge"] = _ms_since(step_started)
 
         processing_ms = round((time.perf_counter() - started) * 1000)
         logger.info(
-            "Analysed %s pages (%s chunks, %s OCR pages) in %s ms",
+            "Analysed %s pages (%s chunks, %s OCR pages) in %s ms %s",
             extracted.page_count,
             total,
             len(ocr_texts),
             processing_ms,
+            steps,
         )
         return AnalysisResult(
             document=DocumentInfo(
@@ -132,6 +141,7 @@ class Analyzer:
                 truncated=chunks.truncated,
                 warnings=warnings,
                 processing_ms=processing_ms,
+                steps_ms=steps,
             ),
         )
 
@@ -197,6 +207,10 @@ def _unique_dates(parts: list[LlmAnalysis]) -> list[DateItem]:
             seen.add(key)
             result.append(item)
     return result[:_MAX_LIST_ITEMS]
+
+
+def _ms_since(start: float) -> int:
+    return round((time.perf_counter() - start) * 1000)
 
 
 def _page_list(numbers: list[int], limit: int = 10) -> str:

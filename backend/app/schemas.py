@@ -160,6 +160,8 @@ class AnalysisMeta(CamelModel):
     truncated: bool
     warnings: list[str]
     processing_ms: int
+    steps_ms: dict[str, int] = Field(default_factory=dict)
+    """Duration of each step: extract, ocr, analysis, merge."""
 
 
 class AnalysisResult(CamelModel):
