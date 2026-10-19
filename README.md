@@ -6,6 +6,9 @@ w uporządkowane dane JSON zgodne ze schematem z briefu.
 - **Demo:** https://kstatharas.github.io/pdf-insight/
 - **API:** https://pdf-insight-api-fplc.onrender.com (`/api/health`, dokumentacja OpenAPI pod `/docs`)
 
+Nie masz PDF pod ręką? Na stronie startowej jest przycisk **„Przeanalizuj przykładową umowę”**
+(`samples/Test_PDF_Insight_umowa_14-2026.pdf`: 12 stron, skan aneksu, pułapka prompt injection).
+
 ![Wynik analizy przykładowej umowy](docs/screenshot.png)
 
 ## Jak to działa
