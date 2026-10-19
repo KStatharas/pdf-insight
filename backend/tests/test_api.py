@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.llm import Message
 from app.main import create_app
-from app.prompts import MERGE_SYSTEM_PROMPT, OCR_SYSTEM_PROMPT
+from app.prompts import MERGE_SYSTEM_PROMPT
 from tests.helpers import (
     SAMPLE_PAGE,
     FakeChat,
@@ -244,21 +244,22 @@ def test_long_documents_are_analysed_in_chunks_and_merged(
     assert len(body["amounts"]) == 1
 
 
-def test_scanned_pages_are_read_with_ocr(client_factory: ClientFactory) -> None:
-    def reply(messages: list[Message]) -> str:
-        if messages[0]["content"] == OCR_SYSTEM_PROMPT:
-            return "FAKTURA nr 1/2026\nDo zapłaty: 1 230,00 zł"
-        return analysis_json(
-            document={"language": "pl", "type": "faktura", "title": None, "date": None}
-        )
-
-    client, chat = client_factory(reply)
+def test_scanned_pages_are_sent_as_images_in_the_analysis_request(
+    client_factory: ClientFactory,
+) -> None:
+    reply = analysis_json(
+        document={"language": "pl", "type": "faktura", "title": None, "date": None}
+    )
+    client, chat = client_factory([reply])
 
     response = _upload(client, make_scanned_pdf(), name="skan.pdf")
 
     assert response.status_code == 200
     assert response.json()["meta"]["ocrPages"] == [1]
-    ocr_content = chat.calls[0][0][1]["content"]
-    assert isinstance(ocr_content, list)
-    assert ocr_content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
-    assert "Do zapłaty: 1 230,00 zł" in str(chat.calls[1][0][1]["content"])
+    assert len(chat.calls) == 1  # no separate OCR round trip
+    content = chat.calls[0][0][1]["content"]
+    assert isinstance(content, list)
+    assert "[page 1]" in content[0]["text"]
+    assert "attached image of page 1" in content[0]["text"]
+    assert content[1]["text"] == "Image of scanned page 1:"
+    assert content[2]["image_url"]["url"].startswith("data:image/jpeg;base64,")

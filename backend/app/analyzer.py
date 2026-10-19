@@ -18,8 +18,8 @@ from app.prompts import (
     analysis_messages,
     describe_error,
     merge_messages,
-    ocr_messages,
     repair_messages,
+    scanned_page_placeholder,
 )
 from app.schemas import (
     Amount,
@@ -61,13 +61,15 @@ class Analyzer:
         )
 
         steps: dict[str, int] = {"extract": _ms_since(started)}
-        step_started = time.perf_counter()
-        ocr_texts = await self._ocr(extracted.images)
-        if extracted.images:
-            steps["ocr"] = _ms_since(step_started)
-        pages = [PageText(p.number, ocr_texts.get(p.number, p.text)) for p in extracted.pages]
-        full_text = "\n".join(p.text for p in pages)
-        if len(full_text.strip()) < _MIN_DOCUMENT_CHARS:
+        # Scanned pages are not transcribed in a separate OCR call: their images go into the
+        # analysis request itself, which saves a full model round trip (~10-20 s).
+        attached = {image.number: image for image in extracted.images}
+        pages = [
+            PageText(p.number, scanned_page_placeholder(p.number)) if p.number in attached else p
+            for p in extracted.pages
+        ]
+        text_layer = "\n".join(p.text for p in extracted.pages)
+        if len(text_layer.strip()) < _MIN_DOCUMENT_CHARS and not attached:
             raise AppError(
                 "PDF_NO_TEXT",
                 "Nie udało się odczytać tekstu z pliku PDF. Dokument jest pusty "
@@ -76,12 +78,12 @@ class Analyzer:
             )
 
         warnings: list[str] = []
-        unread = [n for n in extracted.scanned_pages if n not in ocr_texts]
+        unread = [n for n in extracted.scanned_pages if n not in attached]
         if unread:
             warnings.append(
                 f"Nie odczytano tekstu ze stron bez warstwy tekstowej: {_page_list(unread)}."
             )
-        if looks_like_prompt_injection(full_text):
+        if looks_like_prompt_injection(text_layer):
             warnings.append(INJECTION_WARNING)
 
         chunks = build_chunks(
@@ -98,7 +100,10 @@ class Analyzer:
         step_started = time.perf_counter()
         partials = list(
             await asyncio.gather(
-                *(self._analyze_chunk(text, i, total) for i, text in enumerate(chunks.texts, 1))
+                *(
+                    self._analyze_chunk(text, _images_in(text, attached), i, total)
+                    for i, text in enumerate(chunks.texts, 1)
+                )
             )
         )
         steps["analysis"] = _ms_since(step_started)
@@ -115,7 +120,7 @@ class Analyzer:
             "Analysed %s pages (%s chunks, %s OCR pages) in %s ms %s",
             extracted.page_count,
             total,
-            len(ocr_texts),
+            len(attached),
             processing_ms,
             steps,
         )
@@ -137,7 +142,7 @@ class Analyzer:
             meta=AnalysisMeta(
                 model=self._chat.name,
                 chunks=total,
-                ocr_pages=sorted(ocr_texts),
+                ocr_pages=sorted(attached),
                 truncated=chunks.truncated,
                 warnings=warnings,
                 processing_ms=processing_ms,
@@ -145,21 +150,11 @@ class Analyzer:
             ),
         )
 
-    async def _ocr(self, images: list[PageImage]) -> dict[int, str]:
-        replies = await asyncio.gather(*(self._ocr_page(image) for image in images))
-        return {image.number: text for image, text in zip(images, replies, strict=True) if text}
-
-    async def _ocr_page(self, image: PageImage) -> str:
-        try:
-            reply = await self._chat.complete(ocr_messages(image.jpeg, image.number))
-        except AppError as exc:
-            logger.warning("OCR failed for page %s: %s", image.number, exc.code)
-            return ""
-        return reply.strip()
-
-    async def _analyze_chunk(self, text: str, part: int, total: int) -> LlmAnalysis:
+    async def _analyze_chunk(
+        self, text: str, images: list[PageImage], part: int, total: int
+    ) -> LlmAnalysis:
         return await self._complete_validated(
-            analysis_messages(text, part, total), LlmAnalysis, ANALYSIS_JSON_SCHEMA
+            analysis_messages(text, part, total, images), LlmAnalysis, ANALYSIS_JSON_SCHEMA
         )
 
     async def _complete_validated(
@@ -207,6 +202,10 @@ def _unique_dates(parts: list[LlmAnalysis]) -> list[DateItem]:
             seen.add(key)
             result.append(item)
     return result[:_MAX_LIST_ITEMS]
+
+
+def _images_in(chunk: str, images: dict[int, PageImage]) -> list[PageImage]:
+    return [image for number, image in sorted(images.items()) if f"[page {number}]" in chunk]
 
 
 def _ms_since(start: float) -> int:
