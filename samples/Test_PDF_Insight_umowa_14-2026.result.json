@@ -1,0 +1,162 @@
+{
+  "document": {
+    "fileName": "Test_PDF_Insight_umowa_14-2026.pdf",
+    "pages": 12,
+    "language": "pl",
+    "type": "umowa",
+    "title": "Umowa ramowa nr 14/2026 o wdrożenie i utrzymanie systemu CRM",
+    "date": "2026-03-12"
+  },
+  "summary": "Niniejsza umowa ramowa została zawarta w dniu 12 marca 2026 roku w Gdańsku pomiędzy Nordwave Logistics sp. z o.o. a Kwadrat Software S.A. Przedmiotem umowy jest wdrożenie i utrzymanie systemu CRM w modelu SaaS dla 120 użytkowników (zwiększone do 135 na mocy aneksu nr 1), migracja danych oraz integracja z systemami zewnętrznymi. Całkowite wynagrodzenie ryczałtowe za wdrożenie wynosi 184 500,00 zł netto, natomiast miesięczny abonament za utrzymanie ustalono początkowo na 12 300,00 PLN netto, z podwyższeniem do 13 100,00 PLN netto od 1 kwietnia 2027 roku. Aneks nr 1 z dnia 20 marca 2026 roku zmodyfikował koszty abonamentu oraz liczbę użytkowników.",
+  "keyPoints": [
+    "Wdrożenie systemu CRM dla Nordwave Logistics przez Kwadrat Software S.A.",
+    "Wynagrodzenie ryczałtowe za wdrożenie wynosi 184 500,00 zł netto.",
+    "Początkowy abonament miesięczny za utrzymanie wynosi 12 300,00 PLN netto, a od 1 kwietnia 2027 r. wzrasta do 13 100,00 PLN netto.",
+    "Liczba użytkowników Systemu została zwiększona ze 120 do 135 na mocy aneksu nr 1.",
+    "Planowany termin uruchomienia (Go-live) to 12 października 2026 r.",
+    "Umowa została zawarta na czas określony od 1 kwietnia 2026 r. do 31 marca 2028 r."
+  ],
+  "entities": {
+    "organizations": ["Nordwave Logistics sp. z o.o.", "Kwadrat Software S.A."],
+    "people": [
+      "Anna Kowalczyk",
+      "Marek Zieliński",
+      "Paweł Dąbrowski",
+      "Tomasz Wiśniewski",
+      "Julia Mazur",
+      "Katarzyna Nowak",
+      "Piotr Lewandowski",
+      "Michał Kamiński",
+      "Ewa Szymańska"
+    ]
+  },
+  "amounts": [
+    {
+      "value": 184500.0,
+      "currency": "PLN",
+      "context": "Wynagrodzenie ryczałtowe za wdrożenie netto"
+    },
+    {
+      "value": 226935.0,
+      "currency": "PLN",
+      "context": "Wynagrodzenie ryczałtowe za wdrożenie brutto"
+    },
+    {
+      "value": 12300.0,
+      "currency": "PLN",
+      "context": "Abonament miesięczny netto do 31 marca 2027 r."
+    },
+    {
+      "value": 13100.0,
+      "currency": "PLN",
+      "context": "Abonament miesięczny netto od 1 kwietnia 2027 r."
+    },
+    {
+      "value": 2500000.0,
+      "currency": "PLN",
+      "context": "Kapitał zakładowy Zamawiającego"
+    },
+    {
+      "value": 1200000.0,
+      "currency": "PLN",
+      "context": "Kapitał zakładowy Wykonawcy"
+    },
+    {
+      "value": 250000.0,
+      "currency": "PLN",
+      "context": "Budżet maksymalny Zamawiającego na etap wdrożenia"
+    },
+    {
+      "value": 8600.0,
+      "currency": "EUR",
+      "context": "Roczne opłaty licencyjne za moduł analityczny (4 instancje)"
+    },
+    {
+      "value": 890.0,
+      "currency": "USD",
+      "context": "Miesięczny koszt infrastruktury chmurowej"
+    },
+    {
+      "value": 60000.0,
+      "currency": "PLN",
+      "context": "Maksymalna roczna wartość prac dodatkowych netto"
+    },
+    {
+      "value": 68080.5,
+      "currency": "PLN",
+      "context": "Kwota brutto faktury zaliczkowej FZ/2026/03/007"
+    },
+    {
+      "value": 55350.0,
+      "currency": "PLN",
+      "context": "Kwota netto faktury zaliczkowej FZ/2026/03/007"
+    },
+    {
+      "value": 15129.0,
+      "currency": "PLN",
+      "context": "Abonament miesięczny brutto"
+    }
+  ],
+  "dates": [
+    {
+      "date": "2026-03-12",
+      "context": "Data zawarcia Umowy"
+    },
+    {
+      "date": "2026-03-20",
+      "context": "Data zawarcia aneksu nr 1"
+    },
+    {
+      "date": "2026-04-01",
+      "context": "Początek okresu obowiązywania Umowy"
+    },
+    {
+      "date": "2028-03-31",
+      "context": "Koniec okresu obowiązywania Umowy"
+    },
+    {
+      "date": "2026-10-12",
+      "context": "Planowany termin Go-live"
+    },
+    {
+      "date": "2026-03-15",
+      "context": "Data wystawienia faktury zaliczkowej"
+    },
+    {
+      "date": "2026-03-29",
+      "context": "Termin płatności faktury zaliczkowej"
+    },
+    {
+      "date": "2027-04-01",
+      "context": "Termin zmiany stawki abonamentu miesięcznego"
+    },
+    {
+      "date": "2026-02-24",
+      "context": "Data spotkania przedumownego"
+    }
+  ],
+  "keywords": [
+    "CRM",
+    "wdrożenie",
+    "utrzymanie",
+    "SaaS",
+    "umowa ramowa",
+    "Nordwave Logistics",
+    "Kwadrat Software",
+    "aneks"
+  ],
+  "meta": {
+    "model": "gemini-3.5-flash-lite",
+    "chunks": 1,
+    "ocrPages": [11],
+    "truncated": false,
+    "warnings": [
+      "Dokument zawiera tekst wyglądający na polecenia dla systemu AI. Został potraktowany jako zwykła treść dokumentu i nie został wykonany."
+    ],
+    "processingMs": 21190,
+    "stepsMs": {
+      "extract": 742,
+      "analysis": 20358
+    }
+  }
+}
