@@ -46,6 +46,7 @@ wyświetli, zapisze w historii lub pozwoli pobrać.
 | F-08 Długie dokumenty (fragmenty + scalanie) | ✅ | `backend/app/chunking.py`, `analyzer.py` |
 | F-09 Historia analiz w przeglądarce | ✅ | `lib/history.ts` (localStorage, 10 ostatnich) |
 | F-10 OCR skanów | ✅ | obraz strony w zapytaniu do multimodalnego modelu (max 4 strony) |
+| Dodatkowo: język interfejsu PL/EN | ✅ | `src/i18n/`, `/api/translate` — zob. niżej |
 
 ## Decyzje
 
@@ -72,6 +73,21 @@ wyświetli, zapisze w historii lub pozwoli pobrać.
 - **XMLHttpRequest zamiast fetch** przy wysyłce, bo tylko XHR raportuje postęp uploadu.
 - **Pole `meta`** (model, czas, strony OCR, ostrzeżenia) dodane do schematu — brief pozwala
   dodawać pola.
+
+## Język interfejsu (polski / angielski)
+
+W nagłówku jest lista **Język / Language**. Wybór zmienia cały interfejs (teksty, komunikaty
+błędów, ostrzeżenia, format liczb i dat) i jest zapamiętywany w przeglądarce; domyślnie polski.
+
+- **Podsumowanie** jest tłumaczone na wybrany język na żądanie (`POST /api/translate`),
+  z linkiem „Pokaż oryginał” / „Show original”. Tłumaczenie jest zapisywane w przeglądarce,
+  więc ponowne przełączenie nie wysyła kolejnego zapytania.
+- **Wynik analizy i plik JSON nie zmieniają się** — zawsze są w języku dokumentu. Tłumaczenie
+  dotyczy tylko widoku. Pozostałe pola (kluczowe informacje, opisy kwot) zostają w oryginale.
+- Ostrzeżenia mają kody (`meta.notices`), dzięki czemu interfejs pokazuje je w swoim języku;
+  pole `meta.warnings` (po polsku) zostało bez zmian.
+- `/api/translate` traktuje tekst jako dane (polecenia w nim są tłumaczone, nie wykonywane),
+  waliduje odpowiedź (1 ponowna próba) i ma osobny limit (40 zapytań / 10 min na IP).
 
 ## Bezpieczeństwo
 
@@ -122,7 +138,7 @@ cd frontend && npm run format:check && npm run lint && npm run typecheck && npm 
 | `LLM_API_KEY` | backend | klucz Google AI Studio (wymagany) |
 | `ALLOWED_ORIGINS` | backend | dozwolone originy CORS, np. `https://kstatharas.github.io` |
 | `LLM_PROVIDER`, `LLM_MODEL`, `LLM_FALLBACK_MODELS` | backend | dostawca (`gemini`/`openai`), model i modele zapasowe |
-| `MAX_FILE_MB`, `RATE_LIMIT_*`, `CHUNK_CHARS`, `OCR_*` | backend | limity, zob. `backend/.env.example` |
+| `MAX_FILE_MB`, `RATE_LIMIT_*`, `TRANSLATE_RATE_LIMIT_REQUESTS`, `CHUNK_CHARS`, `OCR_*` | backend | limity, zob. `backend/.env.example` |
 | `VITE_API_URL` | frontend | adres backendu; w GitHub Actions jako *repository variable* |
 | `VITE_BASE_PATH` | frontend | ścieżka bazowa; workflow ustawia `/<repo>/` |
 
@@ -158,7 +174,8 @@ cd frontend && npm run format:check && npm run lint && npm run typecheck && npm 
 ```
 backend/            FastAPI: ekstrakcja, OCR, chunking, klient LLM, walidacja (pytest, ruff, mypy)
 frontend/src/
-  api/              klient HTTP (upload z postępem, health check)
+  api/              klient HTTP (upload z postępem, tłumaczenie, health check)
+  i18n/             słowniki PL/EN, kontekst języka, komunikaty błędów
   components/       widoki: upload, postęp, błąd, wynik, historia, JSON
   lib/              schemat Zod, walidacja pliku, historia, formatowanie, eksport
 samples/            przykładowy dokument testowy
