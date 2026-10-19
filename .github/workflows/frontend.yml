@@ -11,9 +11,11 @@ on:
 permissions:
   contents: read
 
+# Pull requests cancel their outdated runs; on main a running Pages deployment is never cancelled
+# halfway (a newer run waits for it instead), as in GitHub's Pages starter workflow.
 concurrency:
-  group: frontend-${{ github.ref }}
-  cancel-in-progress: true
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
