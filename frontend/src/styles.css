@@ -409,6 +409,26 @@ pre {
   color: var(--warn-ink);
 }
 
+.sample {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.link-button {
+  border: 0;
+  padding: 0.25rem 0;
+  background: none;
+  color: var(--stamp);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--ink);
+}
+
 .privacy {
   padding-left: 1rem;
   border-left: 3px solid var(--stamp);

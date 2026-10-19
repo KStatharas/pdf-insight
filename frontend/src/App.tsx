@@ -17,6 +17,9 @@ import {
 import type { AnalysisResult } from './lib/schema';
 import { checkFile } from './lib/validateFile';
 
+const SAMPLE_NAME = 'Test_PDF_Insight_umowa_14-2026.pdf';
+const SAMPLE_URL = `${import.meta.env.BASE_URL}samples/${SAMPLE_NAME}`;
+
 type View =
   | { status: 'idle'; fileError: string | null }
   | {
@@ -105,6 +108,17 @@ export function App() {
     }
   }, []);
 
+  const analyzeSample = useCallback(async () => {
+    try {
+      const response = await fetch(SAMPLE_URL);
+      if (!response.ok) throw new Error(String(response.status));
+      const bytes = await response.arrayBuffer();
+      await analyze(new File([bytes], SAMPLE_NAME, { type: 'application/pdf' }));
+    } catch {
+      setView({ status: 'idle', fileError: 'Nie udało się pobrać przykładowej umowy.' });
+    }
+  }, [analyze]);
+
   const reset = useCallback(() => {
     abortRef.current?.abort();
     setView({ status: 'idle', fileError: null });
@@ -155,6 +169,9 @@ export function App() {
             health={health}
             onFile={(file) => {
               void analyze(file);
+            }}
+            onSample={() => {
+              void analyzeSample();
             }}
           />
         )}

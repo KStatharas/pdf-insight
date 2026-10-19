@@ -85,6 +85,25 @@ describe('App', () => {
     expect(analyzeMock).toHaveBeenCalledTimes(2);
   });
 
+  it('analyses the bundled sample contract', async () => {
+    analyzeMock.mockResolvedValue(sampleResult());
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('%PDF-1.4\n%sample'));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Przeanalizuj przykładową umowę' }));
+
+    expect(await screen.findByRole('heading', { name: /Umowa ramowa/ })).toBeInTheDocument();
+    const url = fetchMock.mock.calls[0]?.[0];
+    expect(typeof url === 'string' ? url : '').toContain(
+      'samples/Test_PDF_Insight_umowa_14-2026.pdf',
+    );
+    expect(analyzeMock.mock.calls[0]?.[0].name).toBe('Test_PDF_Insight_umowa_14-2026.pdf');
+    fetchMock.mockRestore();
+  });
+
   it('opens a saved result from the history', async () => {
     analyzeMock.mockResolvedValue(sampleResult());
     const user = userEvent.setup();

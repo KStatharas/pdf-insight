@@ -7,9 +7,11 @@ interface UploadPanelProps {
   error: string | null;
   health: HealthStatus | 'checking';
   onFile: (file: File) => void;
+  /** Analyses the bundled sample contract, for visitors without a PDF at hand. */
+  onSample: () => void;
 }
 
-export function UploadPanel({ error, health, onFile }: UploadPanelProps) {
+export function UploadPanel({ error, health, onFile, onSample }: UploadPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const errorId = useId();
@@ -109,6 +111,14 @@ export function UploadPanel({ error, health, onFile }: UploadPanelProps) {
           Serwer działa, ale nie ma skonfigurowanego klucza usługi AI, więc analiza się nie uda.
         </p>
       )}
+
+      <p className="sample">
+        Nie masz pod ręką pliku?{' '}
+        <button type="button" className="link-button" onClick={onSample}>
+          Przeanalizuj przykładową umowę
+        </button>{' '}
+        <span className="muted">(12 stron, w tym skan aneksu)</span>
+      </p>
 
       <aside className="privacy" aria-label="Informacja o przetwarzaniu pliku">
         <p>
