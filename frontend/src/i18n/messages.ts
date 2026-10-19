@@ -141,6 +141,7 @@ const pl = {
     tabView: 'Wyniki',
     tabJson: 'JSON',
     download: 'Pobierz JSON',
+    downloaded: 'Pobrano',
     downloadTitle: (name: string) => `Zapisz plik ${name}`,
     analyseAnother: 'Analizuj kolejny plik',
     warningsLabel: 'Ostrzeżenia',
@@ -166,7 +167,7 @@ const pl = {
     unknownLanguage: 'nieznany',
   },
   translation: {
-    translating: 'Tłumaczę wyniki…',
+    translating: 'Tłumaczę…',
     failed: 'Nie udało się przetłumaczyć wyników.',
     retry: 'Spróbuj ponownie',
   },
@@ -319,6 +320,7 @@ const en: Messages = {
     tabView: 'Results',
     tabJson: 'JSON',
     download: 'Download JSON',
+    downloaded: 'Downloaded',
     downloadTitle: (name: string) => `Save ${name}`,
     analyseAnother: 'Analyse another file',
     warningsLabel: 'Warnings',
@@ -343,7 +345,7 @@ const en: Messages = {
     unknownLanguage: 'unknown',
   },
   translation: {
-    translating: 'Translating the results…',
+    translating: 'Translating…',
     failed: 'The results could not be translated.',
     retry: 'Try again',
   },

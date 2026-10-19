@@ -16,6 +16,7 @@ import {
   removeFromHistory,
   type HistoryEntry,
 } from './lib/history';
+import { prefersReducedMotion } from './lib/motion';
 import type { AnalysisResult } from './lib/schema';
 import { checkFile, type FileCheck } from './lib/validateFile';
 
@@ -63,10 +64,22 @@ export function App() {
     [],
   );
 
-  // Move focus to the new content when the view changes, so keyboard and screen-reader users
-  // are not left on a button that no longer exists.
+  // Each view starts at the top (the sample link sits low on phones), and focus moves to the new
+  // content so keyboard and screen-reader users are not left on a button that no longer exists.
+  const firstView = useRef(true);
   useEffect(() => {
-    if (view.status !== 'idle' && view.status !== 'working') mainRef.current?.focus();
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
+    const page = document.scrollingElement;
+    // jsdom (tests) has no scrolling, so the method may be missing there.
+    if (page && 'scrollTo' in page && typeof page.scrollTo === 'function') {
+      page.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    }
+    if (view.status !== 'idle' && view.status !== 'working') {
+      mainRef.current?.focus({ preventScroll: true });
+    }
   }, [view.status]);
 
   const analyze = useCallback(async (file: File) => {

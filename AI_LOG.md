@@ -83,6 +83,20 @@
 - **Nagłówek na 360 px.** Dodatkowa lista języków łamała nagłówek na trzy wiersze; na wąskich
   ekranach etykieta jest ukryta wizualnie (zostaje dla czytników ekranu), a odstępy mniejsze.
 
+### Animacje i odświeżenie stylów
+
+- **Przewijanie w poziomie na telefonie.** Po owinięciu głównej kolumny w „arkusz” z paddingiem
+  strona miała 400 px szerokości przy ekranie 360 px — elementy siatki mają domyślnie
+  `min-width: auto` i rozpychała je tabela kwot. Poprawione `minmax(0, 1fr)`, ciaśniejszą tabelą
+  na wąskich ekranach i łamaniem długich słów w opisach.
+- **`key` na liście języków.** Pierwszy pomysł na animację globusa (przemontowanie `<select>`
+  przez `key`) gubił fokus klawiatury przy każdej zmianie języka; `key` dostał tylko sam globus.
+- **Cyfry tabelaryczne.** `font-variant-numeric: tabular-nums` w tym kroju poszerza przecinek
+  dziesiętny („184 500 , 00”) i kropkę („0 s .”); wyłączone tam, gdzie kolumna i tak jest
+  wyrównana do prawej.
+- **Pozycja przewijania.** Kliknięcie „przykładowej umowy” nisko na telefonie zostawiało ekran
+  analizy przewinięty w dół; każda zmiana widoku przewija teraz na górę.
+
 ## Czego pilnowałem ręcznie
 
 - Każda odpowiedź modelu przechodzi przez schemat dwa razy (Pydantic w backendzie, Zod

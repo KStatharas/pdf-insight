@@ -37,20 +37,24 @@ export function Header({
           <label htmlFor={languageId} className="language-label">
             {t.languageLabel}
           </label>
-          <select
-            id={languageId}
-            className="language-select"
-            value={language}
-            onChange={(event) => {
-              if (isLanguage(event.target.value)) setLanguage(event.target.value);
-            }}
-          >
-            {LANGUAGES.map((code) => (
-              <option key={code} value={code} lang={code}>
-                {LANGUAGE_NAMES[code]}
-              </option>
-            ))}
-          </select>
+          <span className="language-control">
+            {/* Keyed by language so the globe gives a little spin on every switch. */}
+            <span key={language} className="language-globe" aria-hidden="true" />
+            <select
+              id={languageId}
+              className="language-select"
+              value={language}
+              onChange={(event) => {
+                if (isLanguage(event.target.value)) setLanguage(event.target.value);
+              }}
+            >
+              {LANGUAGES.map((code) => (
+                <option key={code} value={code} lang={code}>
+                  {LANGUAGE_NAMES[code]}
+                </option>
+              ))}
+            </select>
+          </span>
         </div>
         <button
           type="button"

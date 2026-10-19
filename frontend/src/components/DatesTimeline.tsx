@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { useI18n } from '../i18n/context';
 import { formatIsoDate, sortDates } from '../lib/format';
 import type { DateItem } from '../lib/schema';
@@ -8,9 +10,11 @@ interface DatesTimelineProps {
   contexts: (string | null)[];
   lang: string | undefined;
   pending: boolean;
+  /** Animate descriptions that were just replaced by their translation. */
+  inkIn: boolean;
 }
 
-export function DatesTimeline({ dates, contexts, lang, pending }: DatesTimelineProps) {
+export function DatesTimeline({ dates, contexts, lang, pending, inkIn }: DatesTimelineProps) {
   const { t, locale } = useI18n();
   if (dates.length === 0) {
     return <p className="muted">{t.dates.empty}</p>;
@@ -21,11 +25,19 @@ export function DatesTimeline({ dates, contexts, lang, pending }: DatesTimelineP
       {sortDates(
         dates.map((item, index) => ({ ...item, context: contexts[index] ?? item.context })),
       ).map((item, index) => (
-        <li key={`${item.date}-${String(index)}`} className="timeline-item">
+        <li
+          key={`${item.date}-${String(index)}`}
+          className="timeline-item"
+          style={{ '--i': index } as CSSProperties}
+        >
           <time dateTime={item.date} className="timeline-date">
             {formatIsoDate(item.date, locale)}
           </time>
-          <span className={`timeline-context${pending ? ' is-pending' : ''}`} lang={lang}>
+          <span
+            key={`context-${String(lang)}`}
+            className={`timeline-context${pending ? ' is-pending' : ''}${inkIn ? ' ink-in' : ''}`}
+            lang={lang}
+          >
             {item.context ?? <span className="muted">{t.dates.noContext}</span>}
           </span>
         </li>

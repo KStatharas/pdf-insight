@@ -1,22 +1,34 @@
 /*
  * PDF Insight — visual language: office paper and stamp ink.
- * Cool paper-grey ground, navy ink for text, a violet "stamp ink" accent used sparingly.
+ * A paper desk (cool grey with a faint dot grid), documents as white sheets, navy ink for text
+ * and a violet "stamp ink" accent. Motion follows the same story: sheets get dropped, scanned
+ * and stamped. Every animation is switched off for visitors who prefer reduced motion.
  */
 
 :root {
   --paper: #eef1f5;
+  --paper-dot: #d3d9e4;
   --sheet: #ffffff;
+  --sheet-edge: #e3e7ee;
   --ink: #1d2540;
   --ink-soft: #4f5873;
   --rule: #d5dae4;
   --rule-strong: #b8c0cf;
   --stamp: #5a3fc0;
+  --stamp-strong: #4730a3;
   --stamp-wash: #ece8fb;
   --warn-ink: #8a4b06;
   --warn-wash: #fdf3e2;
   --error-ink: #a1261b;
   --error-wash: #fbeceb;
   --ok: #1f7a4d;
+  --ok-wash: #e3f4ea;
+  --eur: #1f5fa8;
+  --eur-wash: #e4eefa;
+  --usd: #1f7a4d;
+  --usd-wash: #e3f4ea;
+  --shadow-sheet: 0 1px 2px rgb(29 37 64 / 6%), 0 8px 24px -12px rgb(29 37 64 / 22%);
+  --shadow-lift: 0 2px 4px rgb(29 37 64 / 8%), 0 18px 36px -16px rgb(29 37 64 / 35%);
 
   --font-ui: 'Schibsted Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
   --font-read: 'Literata Variable', Georgia, 'Times New Roman', serif;
@@ -27,9 +39,12 @@
   --step-2: 1.5625rem;
   --step-3: 2.25rem;
 
-  --radius-sheet: 3px;
-  --radius-control: 6px;
+  --radius-sheet: 4px;
+  --radius-control: 8px;
   --gutter: clamp(1rem, 4vw, 2.5rem);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   color-scheme: light;
 }
@@ -37,18 +52,28 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #12172a;
+    --paper-dot: #1f2640;
     --sheet: #1a2036;
+    --sheet-edge: #262e4a;
     --ink: #e7eaf3;
     --ink-soft: #a6aec6;
     --rule: #2c3450;
     --rule-strong: #3e4767;
     --stamp: #b3a2ff;
+    --stamp-strong: #cbbfff;
     --stamp-wash: #2a2550;
     --warn-ink: #f3c27a;
     --warn-wash: #3a2b12;
     --error-ink: #ff9b91;
     --error-wash: #3d1c1a;
     --ok: #6fd3a1;
+    --ok-wash: #173627;
+    --eur: #8cbcf5;
+    --eur-wash: #1b2b47;
+    --usd: #6fd3a1;
+    --usd-wash: #173627;
+    --shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 28px -14px rgb(0 0 0 / 60%);
+    --shadow-lift: 0 2px 4px rgb(0 0 0 / 35%), 0 20px 40px -16px rgb(0 0 0 / 70%);
     color-scheme: dark;
   }
 }
@@ -66,12 +91,13 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--paper);
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--paper-dot) 1px, transparent 1.4px);
+  background-size: 22px 22px;
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: var(--step-0);
   line-height: 1.5;
-  font-feature-settings: 'tnum' 0;
 }
 
 h1,
@@ -99,6 +125,11 @@ pre {
   outline-offset: 2px;
 }
 
+::selection {
+  background: var(--stamp-wash);
+  color: var(--ink);
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -116,7 +147,7 @@ pre {
   color: var(--sheet);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-control);
-  z-index: 10;
+  z-index: 20;
 }
 
 .skip-link:focus {
@@ -142,7 +173,7 @@ pre {
 .main {
   flex: 1;
   width: 100%;
-  max-width: 72rem;
+  max-width: 74rem;
   margin: 0 auto;
   padding: clamp(1.5rem, 5vw, 3.5rem) var(--gutter) 4rem;
 }
@@ -152,14 +183,18 @@ pre {
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 0.875rem var(--gutter);
+  padding: 0.75rem var(--gutter);
   border-bottom: 1px solid var(--rule);
-  background: var(--sheet);
+  background: color-mix(in srgb, var(--sheet) 86%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
 }
 
 .wordmark {
@@ -169,19 +204,46 @@ pre {
   border: 0;
   background: none;
   padding: 0.25rem 0;
-  font-weight: 700;
+  font-weight: 750;
   font-size: var(--step-1);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   cursor: pointer;
 }
 
 .wordmark-mark {
-  width: 1.125rem;
-  height: 1.375rem;
-  border: 2px solid var(--ink);
-  border-radius: 1px;
   position: relative;
-  background: linear-gradient(var(--stamp), var(--stamp)) center 65% / 70% 4px no-repeat;
+  width: 1.25rem;
+  height: 1.5rem;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--sheet);
+  transition: transform 300ms var(--ease-spring);
+}
+
+/* A tiny stamp on the sheet. */
+.wordmark-mark::after {
+  content: '';
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: 22%;
+  height: 0.375rem;
+  border: 2px solid var(--stamp);
+  border-radius: 1px;
+  transform: rotate(-8deg);
+  transition: transform 300ms var(--ease-spring);
+}
+
+.wordmark:hover .wordmark-mark {
+  transform: rotate(-6deg) translateY(-1px);
+}
+
+.wordmark:hover .wordmark-mark::after {
+  transform: rotate(-8deg) scale(1.25);
+}
+
+.wordmark:active .wordmark-mark {
+  transform: scale(0.9);
 }
 
 .header-actions {
@@ -192,6 +254,7 @@ pre {
 }
 
 .language {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -202,20 +265,56 @@ pre {
   color: var(--ink-soft);
 }
 
+.language-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* A small globe drawn with borders; it spins once whenever the language changes. */
+.language-globe {
+  position: absolute;
+  left: 0.75rem;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--stamp);
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--stamp), var(--stamp)) center / 100% 1.5px no-repeat,
+    linear-gradient(var(--stamp), var(--stamp)) center / 1.5px 100% no-repeat;
+  animation: globe-spin 650ms var(--ease-spring);
+  z-index: 1;
+}
+
 .language-select {
+  appearance: none;
+  min-width: 8.5rem;
   min-height: 2.75rem;
-  padding: 0.375rem 2rem 0.375rem 0.75rem;
+  padding: 0.375rem 2.25rem 0.375rem 2.125rem;
   border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-control);
+  border-radius: 999px;
   background-color: var(--sheet);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.125rem) 52%,
+    calc(100% - 0.8rem) 52%;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
   color: var(--ink);
   font: inherit;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .language-select:hover {
-  border-color: var(--ink);
+  border-color: var(--stamp);
+  box-shadow: 0 0 0 4px var(--stamp-wash);
 }
 
 .health {
@@ -227,6 +326,7 @@ pre {
 }
 
 .health-dot {
+  position: relative;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
@@ -235,6 +335,16 @@ pre {
 
 .health-ready .health-dot {
   background: var(--ok);
+}
+
+/* A soft ripple tells that the server is alive. */
+.health-ready .health-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ok);
+  animation: ripple 2.6s ease-out infinite;
 }
 
 .health-offline .health-dot,
@@ -251,16 +361,18 @@ pre {
   padding: 1.25rem var(--gutter);
   font-size: var(--step--1);
   color: var(--ink-soft);
+  background: color-mix(in srgb, var(--sheet) 60%, transparent);
 }
 
 .footer p {
-  max-width: 72rem;
+  max-width: 74rem;
   margin: 0 auto;
 }
 
 /* ---------- Buttons ---------- */
 
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,29 +381,43 @@ pre {
   padding: 0.5rem 1.125rem;
   border-radius: var(--radius-control);
   border: 1px solid transparent;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    transform 160ms var(--ease-spring),
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease;
+}
+
+.button:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .button-primary {
   background: var(--ink);
   color: var(--sheet);
+  box-shadow: 0 6px 16px -10px var(--ink);
 }
 
 .button-primary:hover {
-  background: var(--stamp);
+  background: var(--stamp-strong);
+  box-shadow: 0 10px 22px -12px var(--stamp);
+  transform: translateY(-1px);
 }
 
 .button-quiet {
-  background: transparent;
+  background: var(--sheet);
   border-color: var(--rule-strong);
   color: var(--ink);
 }
 
 .button-quiet:hover {
   border-color: var(--ink);
+  transform: translateY(-1px);
 }
 
 .button-small {
@@ -306,94 +432,211 @@ pre {
   gap: 0.625rem;
 }
 
+/* Download: an arrow that drops into a tray; it turns into a tick once the file is saved. */
+.download-icon {
+  position: relative;
+  width: 0.875rem;
+  height: 1rem;
+  flex: none;
+}
+
+.download-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translate(-50%, 0.2rem) rotate(45deg);
+  box-shadow: 0.17rem 0.17rem 0 -0.005rem transparent;
+}
+
+.download-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.button-download:hover .download-icon::before {
+  animation: arrow-drop 700ms var(--ease-out) infinite;
+}
+
+.button-download.is-done {
+  background: var(--ok);
+  color: var(--sheet);
+  box-shadow: 0 10px 22px -12px var(--ok);
+  animation: bump 380ms var(--ease-spring);
+}
+
+.button-download.is-done .download-icon::before {
+  width: 0.35rem;
+  height: 0.65rem;
+  transform: translate(-50%, -0.05rem) rotate(45deg);
+  animation: none;
+}
+
+.button-download.is-done .download-icon::after {
+  opacity: 0;
+}
+
 /* ---------- Upload ---------- */
 
 .upload {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  grid-template-areas: 'intro drop';
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+  padding-top: clamp(0rem, 3vw, 2rem);
+}
+
+.upload-intro {
+  grid-area: intro;
+  display: grid;
   gap: 1.5rem;
-  max-width: 46rem;
+  align-content: center;
+}
+
+.upload-drop {
+  grid-area: drop;
+  display: grid;
+  gap: 1rem;
 }
 
 .upload h1 {
-  font-size: clamp(1.75rem, 4.5vw, var(--step-3));
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 700;
-  max-width: 20ch;
+  font-size: clamp(1.875rem, 4.6vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 750;
+  max-width: 16ch;
+  text-wrap: balance;
+  animation: rise 600ms var(--ease-out) both;
 }
 
 .lede {
-  margin-top: 0.875rem;
   font-size: var(--step-1);
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--ink-soft);
-  max-width: 38rem;
+  max-width: 34rem;
+  animation: rise 600ms var(--ease-out) 80ms both;
 }
 
+.upload-intro .sample {
+  animation: rise 600ms var(--ease-out) 160ms both;
+}
+
+.upload-intro .privacy {
+  animation: rise 600ms var(--ease-out) 240ms both;
+}
+
+/* The drop target is a sheet of paper with "marching ants" around it. */
 .dropzone {
+  --ants: var(--rule-strong);
+  position: relative;
   display: grid;
   justify-items: center;
   gap: 0.625rem;
-  padding: clamp(1.75rem, 6vw, 3rem) 1.25rem;
+  padding: clamp(2rem, 6vw, 3.25rem) 1.25rem;
   text-align: center;
-  background: var(--sheet);
-  border: 2px dashed var(--rule-strong);
   border-radius: var(--radius-sheet);
+  background:
+    linear-gradient(90deg, var(--ants) 50%, transparent 0) repeat-x top left / 16px 2px,
+    linear-gradient(90deg, var(--ants) 50%, transparent 0) repeat-x bottom left / 16px 2px,
+    linear-gradient(0deg, var(--ants) 50%, transparent 0) repeat-y top left / 2px 16px,
+    linear-gradient(0deg, var(--ants) 50%, transparent 0) repeat-y top right / 2px 16px,
+    var(--sheet);
+  box-shadow: var(--shadow-sheet);
   cursor: pointer;
   transition:
-    border-color 150ms ease,
-    background-color 150ms ease;
+    transform 260ms var(--ease-spring),
+    box-shadow 260ms ease,
+    background-color 200ms ease;
+  animation: rise 650ms var(--ease-out) 120ms both;
 }
 
 .dropzone:hover,
+.dropzone:focus-visible,
 .dropzone.is-dragging {
-  border-color: var(--stamp);
+  --ants: var(--stamp);
+  box-shadow: var(--shadow-lift);
+  animation: marching-ants 900ms linear infinite;
 }
 
 .dropzone.is-dragging {
-  background: var(--stamp-wash);
+  transform: scale(1.015);
+  background-color: var(--stamp-wash);
+}
+
+.dropzone.is-dragging {
+  background:
+    linear-gradient(90deg, var(--ants) 50%, transparent 0) repeat-x top left / 16px 2px,
+    linear-gradient(90deg, var(--ants) 50%, transparent 0) repeat-x bottom left / 16px 2px,
+    linear-gradient(0deg, var(--ants) 50%, transparent 0) repeat-y top left / 2px 16px,
+    linear-gradient(0deg, var(--ants) 50%, transparent 0) repeat-y top right / 2px 16px,
+    var(--stamp-wash);
 }
 
 .dropzone.has-error {
-  border-color: var(--error-ink);
+  --ants: var(--error-ink);
+  animation: shake 420ms ease both;
+}
+
+.sheet-stack {
+  position: relative;
+  width: 5.25rem;
+  height: 6.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .sheet {
-  position: relative;
-  display: grid;
-  align-content: center;
-  gap: 0.375rem;
-  width: 3.5rem;
-  height: 4.5rem;
-  padding: 0 0.625rem;
-  margin-bottom: 0.5rem;
+  position: absolute;
+  inset: 0;
   border: 2px solid var(--ink);
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--sheet);
-  transition: transform 200ms ease;
+  transition: transform 380ms var(--ease-spring);
 }
 
-.dropzone.is-dragging .sheet {
-  transform: translateY(-6px) rotate(-3deg);
+.sheet-back {
+  transform: rotate(-9deg) translate(-0.5rem, 0.25rem);
+  border-color: var(--rule-strong);
+}
+
+.sheet-front {
+  display: grid;
+  align-content: center;
+  gap: 0.4rem;
+  padding: 0 0.75rem;
+  animation: float 3.6s ease-in-out infinite;
 }
 
 .sheet-fold {
   position: absolute;
   top: -2px;
   right: -2px;
-  width: 1rem;
-  height: 1rem;
+  width: 1.125rem;
+  height: 1.125rem;
   background: linear-gradient(
     225deg,
-    var(--paper) 50%,
+    var(--sheet) 50%,
     var(--ink) 50% calc(50% + 2px),
-    var(--sheet) 0
+    var(--stamp-wash) 0
   );
 }
 
 .sheet-line {
   height: 3px;
+  border-radius: 2px;
   background: var(--rule-strong);
+  transform-origin: left;
+  transition: transform 300ms var(--ease-out);
 }
 
 .sheet-line-short {
@@ -401,9 +644,54 @@ pre {
   background: var(--stamp);
 }
 
+.sheet-badge {
+  position: absolute;
+  right: -0.875rem;
+  bottom: 0.625rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+  background: var(--stamp);
+  color: var(--sheet);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  transform: rotate(-8deg);
+}
+
+.dropzone:hover .sheet-front,
+.dropzone:focus-visible .sheet-front {
+  transform: translateY(-6px) rotate(3deg);
+}
+
+.dropzone:hover .sheet-back,
+.dropzone:focus-visible .sheet-back {
+  transform: rotate(-14deg) translate(-0.875rem, 0.375rem);
+}
+
+.dropzone:hover .sheet-line:nth-child(2) {
+  transform: scaleX(0.7);
+}
+
+.dropzone:hover .sheet-line:nth-child(4) {
+  transform: scaleX(0.85);
+}
+
+.dropzone.is-dragging .sheet-front {
+  animation: none;
+  transform: translateY(-14px) rotate(-5deg) scale(1.05);
+}
+
+.dropzone.is-dragging .sheet-back {
+  transform: rotate(-18deg) translate(-1.25rem, 0.5rem);
+}
+
+.dropzone.is-dragging .sheet-badge {
+  animation: wiggle 500ms ease-in-out infinite;
+}
+
 .dropzone-title {
   font-size: var(--step-1);
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .dropzone-or {
@@ -422,7 +710,8 @@ pre {
   background: var(--error-wash);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-control);
-  font-weight: 550;
+  font-weight: 600;
+  animation: rise 300ms var(--ease-out) both;
 }
 
 .notice {
@@ -434,6 +723,7 @@ pre {
 .notice-warn {
   background: var(--warn-wash);
   color: var(--warn-ink);
+  border-left: 4px solid currentColor;
 }
 
 .sample {
@@ -444,24 +734,32 @@ pre {
 .link-button {
   border: 0;
   padding: 0.25rem 0;
-  background: none;
+  background:
+    linear-gradient(var(--stamp), var(--stamp)) left bottom / 100% 2px no-repeat,
+    linear-gradient(var(--stamp-wash), var(--stamp-wash)) left bottom / 0% 100% no-repeat;
   color: var(--stamp);
-  font-weight: 650;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 700;
   cursor: pointer;
+  transition:
+    background-size 300ms var(--ease-out),
+    color 200ms ease;
 }
 
 .link-button:hover {
-  color: var(--ink);
+  background-size:
+    100% 2px,
+    100% 100%;
+  color: var(--stamp-strong);
 }
 
 .privacy {
-  padding-left: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--sheet) 70%, transparent);
   border-left: 3px solid var(--stamp);
   font-size: var(--step--1);
   color: var(--ink-soft);
-  max-width: 40rem;
+  max-width: 38rem;
 }
 
 .privacy strong {
@@ -474,22 +772,119 @@ pre {
 .error-panel {
   display: grid;
   gap: 1.25rem;
-  max-width: 36rem;
+  max-width: 40rem;
+  margin: 0 auto;
   padding: clamp(1.5rem, 5vw, 2.5rem);
   background: var(--sheet);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--sheet-edge);
   border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+  animation: rise 420ms var(--ease-out) both;
+}
+
+/* A sheet passing under a scanner beam. */
+.scanner {
+  position: relative;
+  justify-self: center;
+  width: 6rem;
+  height: 7.25rem;
+}
+
+.scanner-sheet {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  gap: 0.45rem;
+  padding: 0 0.875rem;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  background: var(--sheet);
+}
+
+.scanner-line {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rule);
+}
+
+.scanner-line-short {
+  width: 65%;
+}
+
+.progress-upload .scanner-sheet {
+  animation: upload-hop 1.1s var(--ease-out) infinite;
+}
+
+.progress-upload .scanner-line {
+  background: linear-gradient(90deg, var(--stamp) 0 40%, var(--rule) 40%) 0 0 / 250% 100%;
+  animation: fill-line 1.1s var(--ease-out) infinite;
+}
+
+.scanner-beam {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 0;
+  height: 1.5rem;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--stamp) 35%, transparent) 70%,
+    var(--stamp) 92%,
+    transparent
+  );
+  opacity: 0;
+}
+
+.progress-analysis .scanner-beam {
+  opacity: 1;
+  animation: scan 1.6s ease-in-out infinite alternate;
+}
+
+.progress-analysis .scanner-line {
+  animation: highlight 1.6s ease-in-out infinite alternate;
+}
+
+.progress-analysis .scanner-line:nth-child(2) {
+  animation-delay: 0.25s;
+}
+
+.progress-analysis .scanner-line:nth-child(3) {
+  animation-delay: 0.5s;
+}
+
+.progress-analysis .scanner-line:nth-child(4) {
+  animation-delay: 0.75s;
+}
+
+.progress-analysis .scanner-line:nth-child(5) {
+  animation-delay: 1s;
+}
+
+.scanner-glow {
+  position: absolute;
+  left: 50%;
+  bottom: -0.75rem;
+  width: 120%;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(29 37 64 / 18%), transparent);
+  transform: translateX(-50%);
 }
 
 .progress-title,
 .error-panel h1 {
   font-size: var(--step-2);
   line-height: 1.2;
+  text-align: center;
 }
 
 .progress-file {
   overflow-wrap: anywhere;
   margin-top: -0.75rem;
+  text-align: center;
 }
 
 .steps {
@@ -527,11 +922,18 @@ pre {
   color: var(--ink);
 }
 
+.step.is-active::before {
+  border-color: var(--stamp);
+  color: var(--stamp);
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
 .step.is-done::before {
   content: '✓';
   background: var(--ink);
   border-color: var(--ink);
   color: var(--sheet);
+  animation: pop 360ms var(--ease-spring);
 }
 
 .step-state {
@@ -541,35 +943,39 @@ pre {
 
 .bar {
   grid-column: 2 / -1;
-  height: 4px;
+  height: 6px;
   background: var(--rule);
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .bar-fill {
   display: block;
   height: 100%;
-  background: var(--stamp);
-  transition: width 200ms linear;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--stamp), var(--stamp-strong));
+  transition: width 220ms linear;
 }
 
 .bar-indeterminate .bar-fill {
   width: 35%;
-  animation: slide 1.4s ease-in-out infinite;
+  animation: slide 1.3s ease-in-out infinite;
 }
 
 .progress-time {
-  font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
+  text-align: center;
 }
 
 .progress .button {
-  justify-self: start;
+  justify-self: center;
 }
 
 .error-panel {
   border-color: var(--error-ink);
+  animation:
+    rise 380ms var(--ease-out) both,
+    shake 420ms ease 380ms;
 }
 
 .error-message {
@@ -581,15 +987,18 @@ pre {
 /* ---------- History ---------- */
 
 .history {
-  max-width: 72rem;
+  max-width: 74rem;
   width: calc(100% - 2 * var(--gutter));
   margin: 1rem auto 0;
   padding: 1.25rem;
   background: var(--sheet);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--sheet-edge);
   border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-lift);
   display: grid;
   gap: 1rem;
+  transform-origin: top;
+  animation: drop-down 320ms var(--ease-out) both;
 }
 
 .history-head {
@@ -620,6 +1029,19 @@ pre {
   gap: 0.75rem;
   border-top: 1px solid var(--rule);
   padding: 0.5rem 0;
+  animation: rise 360ms var(--ease-out) both;
+}
+
+.history-item:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.history-item:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.history-item:nth-child(n + 4) {
+  animation-delay: 120ms;
 }
 
 .history-open {
@@ -629,13 +1051,17 @@ pre {
   text-align: left;
   background: none;
   border: 0;
-  padding: 0.375rem 0.25rem;
+  padding: 0.375rem 0.5rem;
   border-radius: var(--radius-control);
   cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 200ms var(--ease-spring);
 }
 
-.history-open:hover .history-name {
-  color: var(--stamp);
+.history-open:hover {
+  background: var(--stamp-wash);
+  transform: translateX(4px);
 }
 
 .history-name {
@@ -660,6 +1086,12 @@ pre {
   gap: 1.5rem;
 }
 
+/* Sections appear one after another once the stamp has landed. */
+.reveal {
+  animation: rise 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 80ms + 420ms);
+}
+
 .result-head {
   display: flex;
   align-items: flex-start;
@@ -667,9 +1099,15 @@ pre {
   flex-wrap: wrap;
 }
 
-/* The one loud element: the document type as a rubber stamp. */
-.stamp {
+.stamp-wrap {
+  position: relative;
   flex: none;
+  margin-top: 0.375rem;
+}
+
+/* The one loud element: the document type as a rubber stamp, thumped onto the page. */
+.stamp {
+  position: relative;
   padding: 0.375rem 0.875rem;
   border: 3px double var(--stamp);
   border-radius: 4px;
@@ -679,20 +1117,37 @@ pre {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   transform: rotate(-4deg);
-  margin-top: 0.375rem;
-  animation: stamp-in 320ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  background: color-mix(in srgb, var(--sheet) 70%, transparent);
+  animation: stamp-in 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  transition: transform 300ms var(--ease-spring);
+}
+
+.stamp:hover {
+  transform: rotate(-1deg) scale(1.05);
+}
+
+/* Ink splash where the stamp hits. */
+.stamp-ink {
+  position: absolute;
+  inset: -40%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--stamp-wash), transparent 70%);
+  opacity: 0;
+  animation: ink-splash 700ms ease-out 260ms both;
 }
 
 .result-heading {
   flex: 1 1 20rem;
   min-width: 0;
+  animation: nudge 300ms ease 300ms both;
 }
 
 .result-heading h1 {
   font-size: clamp(1.5rem, 4vw, var(--step-3));
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .result-sub {
@@ -715,23 +1170,81 @@ pre {
 }
 
 .tab {
+  position: relative;
   min-height: 2.75rem;
   padding: 0.5rem 1rem;
   border: 0;
-  border-bottom: 3px solid transparent;
   background: none;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--ink-soft);
   cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--stamp);
+  transform: scaleX(0);
+  transition: transform 300ms var(--ease-spring);
+}
+
+.tab:hover {
+  color: var(--ink);
 }
 
 .tab[aria-selected='true'] {
   color: var(--ink);
-  border-bottom-color: var(--stamp);
+}
+
+.tab[aria-selected='true']::after {
+  transform: scaleX(1);
 }
 
 .result-toolbar .button-row {
   padding-bottom: 0.625rem;
+  margin-left: auto;
+}
+
+/* Visible "translating" state: a pill with a quill that writes. */
+.translating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+  padding: 0.375rem 0.875rem 0.375rem 0.625rem;
+  border-radius: 999px;
+  background: var(--stamp-wash);
+  color: var(--stamp-strong);
+  font-size: var(--step--1);
+  font-weight: 700;
+  animation: pop 360ms var(--ease-spring);
+}
+
+.translating-pill::after {
+  content: '';
+  width: 1.25rem;
+  height: 0.375rem;
+  background:
+    radial-gradient(circle, currentColor 45%, transparent 50%) 0 50% / 0.375rem 0.375rem no-repeat,
+    radial-gradient(circle, currentColor 45%, transparent 50%) 50% 50% / 0.375rem 0.375rem no-repeat,
+    radial-gradient(circle, currentColor 45%, transparent 50%) 100% 50% / 0.375rem 0.375rem
+      no-repeat;
+  animation: dots 1s steps(4) infinite;
+}
+
+.quill {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 0 70% 0 70%;
+  background: currentColor;
+  transform-origin: bottom left;
+  animation: write 700ms ease-in-out infinite alternate;
 }
 
 .warnings {
@@ -744,7 +1257,7 @@ pre {
 .result-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
-  gap: clamp(1.5rem, 4vw, 3rem);
+  gap: clamp(1.5rem, 4vw, 2.5rem);
   align-items: start;
 }
 
@@ -752,10 +1265,35 @@ pre {
   display: none;
 }
 
-.result-main,
+/* The main column is a sheet of paper on the desk. */
+.result-main {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.25rem;
+  min-width: 0;
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+  background: var(--sheet);
+  border: 1px solid var(--sheet-edge);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+}
+
+.result-main::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: linear-gradient(225deg, var(--paper) 50%, var(--sheet-edge) 50%);
+  border-bottom-left-radius: 3px;
+}
+
 .result-side {
   display: grid;
-  gap: 2.25rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem;
   min-width: 0;
 }
 
@@ -764,40 +1302,87 @@ pre {
   align-items: baseline;
   gap: 0.5rem;
   font-size: var(--step-0);
-  font-weight: 700;
-  margin-bottom: 0.75rem;
+  font-weight: 750;
+  margin-bottom: 0.875rem;
   padding-bottom: 0.375rem;
   border-bottom: 2px solid var(--ink);
 }
 
 .count {
-  font-weight: 500;
-  color: var(--ink-soft);
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--stamp-wash);
+  color: var(--stamp-strong);
+  font-size: 0.75rem;
+  font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
 
 .summary {
   font-family: var(--font-read);
   font-size: clamp(1.125rem, 2.2vw, 1.3125rem);
-  line-height: 1.65;
+  line-height: 1.68;
   max-width: 64ch;
   font-variation-settings: 'opsz' 24;
 }
 
+/* Text waiting for its translation: an ink shimmer runs across it. */
 .is-pending,
 .ledger.is-pending .context {
-  color: var(--ink-soft);
+  color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    var(--ink-soft) 0%,
+    var(--ink-soft) 38%,
+    var(--stamp) 50%,
+    var(--ink-soft) 62%,
+    var(--ink-soft) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ink-shimmer 1.3s linear infinite;
+}
+
+.key-points.is-pending li::before {
+  opacity: 0.4;
+}
+
+/* A translation replacing the original text. */
+.ink-in {
+  animation: ink-in 650ms var(--ease-out) both;
 }
 
 .key-points {
-  padding-left: 1.25rem;
+  list-style: none;
+  padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.625rem;
   max-width: 70ch;
 }
 
-.key-points li::marker {
-  color: var(--stamp);
+.key-points li {
+  position: relative;
+  padding-left: 1.75rem;
+}
+
+/* A tick drawn in stamp ink before each point. */
+.key-points li::before {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 0.3rem;
+  width: 0.45rem;
+  height: 0.8rem;
+  border-right: 2.5px solid var(--stamp);
+  border-bottom: 2.5px solid var(--stamp);
+  transform: rotate(45deg) scale(0);
+  transform-origin: center;
+  animation: tick 420ms var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 800ms);
 }
 
 .table-scroll {
@@ -821,6 +1406,16 @@ pre {
   border-bottom: 1px solid var(--rule);
 }
 
+.ledger tbody tr {
+  animation: rise 420ms var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 45ms + 900ms);
+  transition: background-color 160ms ease;
+}
+
+.ledger tbody tr:hover {
+  background: color-mix(in srgb, var(--stamp-wash) 55%, transparent);
+}
+
 .ledger tbody tr:last-child td {
   border-bottom: 0;
 }
@@ -831,27 +1426,68 @@ pre {
   background: var(--paper);
 }
 
+/* No tabular figures here: in this typeface they widen the decimal comma ("500 , 00"). */
 .ledger .num {
   text-align: right;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  font-weight: 650;
+  font-weight: 700;
   font-size: var(--step-0);
 }
 
 .ledger .currency {
   white-space: nowrap;
-  color: var(--ink-soft);
-  font-weight: 600;
+}
+
+/* Long single words (e.g. "wynagrodzenie") may break so the table fits narrow screens. */
+.ledger .context {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.currency-badge {
+  display: inline-block;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  background: var(--stamp-wash);
+  color: var(--stamp-strong);
+  font-size: 0.75rem;
+  font-weight: 750;
   letter-spacing: 0.04em;
 }
 
+.currency-EUR {
+  background: var(--eur-wash);
+  color: var(--eur);
+}
+
+.currency-USD {
+  background: var(--usd-wash);
+  color: var(--usd);
+}
+
+.currency-none {
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+/* The timeline rule draws itself downwards, then each date pops in. */
 .timeline {
   list-style: none;
   padding: 0;
   position: relative;
   display: grid;
-  gap: 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: var(--rule-strong);
+  transform-origin: top;
+  animation: draw-down 900ms var(--ease-out) 900ms both;
 }
 
 .timeline-item {
@@ -860,24 +1496,44 @@ pre {
   gap: 1rem;
   padding: 0.5rem 0 0.5rem 1.25rem;
   position: relative;
-  border-left: 2px solid var(--rule-strong);
+  border-radius: var(--radius-control);
+  animation: rise 420ms var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 70ms + 1000ms);
+  transition: background-color 160ms ease;
+}
+
+.timeline-item:hover {
+  background: color-mix(in srgb, var(--stamp-wash) 55%, transparent);
 }
 
 .timeline-item::before {
   content: '';
   position: absolute;
-  left: -6px;
+  left: -5px;
   top: 0.95rem;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--sheet);
-  border: 2px solid var(--stamp);
+  border: 2.5px solid var(--stamp);
+  animation: pop 360ms var(--ease-spring) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 70ms + 1050ms);
 }
 
 .timeline-date {
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* Aside: slips of paper. */
+.facts {
+  padding: 1rem 1.125rem 1.125rem;
+  background: var(--sheet);
+  border: 1px solid var(--sheet-edge);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+  background-image: radial-gradient(circle at 0.5rem 0, var(--paper) 0.25rem, transparent 0.3rem);
+  background-size: 1rem 0.5rem;
+  background-repeat: repeat-x;
 }
 
 .facts dl {
@@ -892,7 +1548,7 @@ pre {
 }
 
 .facts dd {
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .entities {
@@ -905,6 +1561,14 @@ pre {
 .entities li {
   padding-left: 0.75rem;
   border-left: 2px solid var(--rule-strong);
+  transition:
+    border-color 160ms ease,
+    transform 200ms var(--ease-spring);
+}
+
+.entities li:hover {
+  border-color: var(--stamp);
+  transform: translateX(3px);
 }
 
 .keywords {
@@ -919,13 +1583,27 @@ pre {
   padding: 0.125rem 0.625rem;
   border: 1px solid var(--rule-strong);
   border-radius: 999px;
+  background: var(--sheet);
   font-size: var(--step--1);
+  animation: pop 360ms var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 50ms + 1000ms);
+  transition:
+    transform 200ms var(--ease-spring),
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.keywords li:hover {
+  transform: translateY(-2px) rotate(-2deg);
+  border-color: var(--stamp);
+  color: var(--stamp-strong);
 }
 
 .json {
   display: grid;
   gap: 0.875rem;
   padding-top: 1rem;
+  animation: rise 360ms var(--ease-out) both;
 }
 
 .json-head {
@@ -947,14 +1625,49 @@ pre {
   overflow: auto;
   padding: 1rem 1.25rem;
   background: var(--sheet);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--sheet-edge);
   border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
   font-size: 0.8125rem;
   line-height: 1.55;
   tab-size: 2;
 }
 
 /* ---------- Responsive ---------- */
+
+@media (max-width: 60rem) {
+  .upload {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+    gap: 1.5rem;
+  }
+
+  /* On one column the drop zone sits right under the introduction. */
+  .upload-intro {
+    display: contents;
+  }
+
+  .upload h1 {
+    order: 1;
+  }
+
+  .lede {
+    order: 2;
+  }
+
+  .upload-drop {
+    grid-area: auto;
+    order: 3;
+  }
+
+  .upload-intro .sample {
+    order: 4;
+  }
+
+  .upload-intro .privacy {
+    order: 5;
+  }
+}
 
 @media (max-width: 52rem) {
   .result-grid {
@@ -973,9 +1686,17 @@ pre {
     align-items: stretch;
   }
 
+  .result-toolbar .button-row {
+    margin-left: 0;
+  }
+
   .result-toolbar .button-row .button {
     flex: 1 1 100%;
     white-space: normal;
+  }
+
+  .translating-pill {
+    align-self: flex-start;
   }
 
   .header-actions {
@@ -995,7 +1716,16 @@ pre {
   }
 
   .language-select {
-    padding: 0.375rem 1.25rem 0.375rem 0.5rem;
+    min-width: 0;
+    padding: 0.375rem 1.75rem 0.375rem 1.875rem;
+  }
+
+  .language-globe {
+    left: 0.625rem;
+  }
+
+  .language-select {
+    padding-left: 1.875rem;
   }
 
   .header .button {
@@ -1006,13 +1736,239 @@ pre {
     gap: 0.375rem;
     font-size: 0.8125rem;
   }
+
+  .result-main {
+    padding: 1rem 0.875rem;
+  }
+
+  .ledger th,
+  .ledger td {
+    padding: 0.5rem 0.375rem;
+  }
+
+  .ledger .num {
+    font-size: var(--step--1);
+  }
+
+  .currency-badge {
+    padding: 0.0625rem 0.3125rem;
+    font-size: 0.6875rem;
+  }
 }
 
 /* ---------- Motion ---------- */
 
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes drop-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bump {
+  0%,
+  100% {
+    transform: none;
+  }
+  45% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes tick {
+  from {
+    transform: rotate(45deg) scale(0);
+  }
+  to {
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-16deg) scale(2.4);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(0.9);
+  }
+  75% {
+    transform: rotate(-5deg) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-4deg) scale(1);
+  }
+}
+
+@keyframes ink-splash {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(2px);
+  }
+  60% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1.5deg);
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(6deg) scale(1.1);
+  }
+}
+
+@keyframes marching-ants {
+  to {
+    background-position:
+      16px 0,
+      -16px 100%,
+      0 -16px,
+      100% 16px,
+      0 0;
+  }
+}
+
+@keyframes upload-hop {
+  0% {
+    transform: translateY(8px);
+  }
+  45% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(8px);
+  }
+}
+
+@keyframes fill-line {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@keyframes scan {
+  from {
+    transform: translateY(-1.5rem);
+  }
+  to {
+    transform: translateY(6.75rem);
+  }
+}
+
+@keyframes highlight {
+  from {
+    background: var(--rule);
+  }
+  to {
+    background: color-mix(in srgb, var(--stamp) 55%, var(--rule));
+  }
+}
+
+@keyframes ripple {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.3;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--stamp) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 8px transparent;
   }
 }
 
@@ -1025,14 +1981,74 @@ pre {
   }
 }
 
-@keyframes stamp-in {
+@keyframes arrow-drop {
   0% {
+    transform: translate(-50%, -0.1rem) rotate(45deg);
     opacity: 0;
-    transform: rotate(-4deg) scale(1.6);
+  }
+  40% {
+    opacity: 1;
   }
   100% {
+    transform: translate(-50%, 0.25rem) rotate(45deg);
+  }
+}
+
+@keyframes globe-spin {
+  from {
+    transform: rotate(-200deg) scale(0.6);
+  }
+  to {
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes ink-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@keyframes ink-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(4px);
+  }
+  to {
     opacity: 1;
-    transform: rotate(-4deg) scale(1);
+    filter: none;
+    transform: none;
+  }
+}
+
+@keyframes write {
+  from {
+    transform: rotate(-12deg) translateX(-1px);
+  }
+  to {
+    transform: rotate(14deg) translateX(2px);
+  }
+}
+
+@keyframes dots {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 -10% 0 0);
+  }
+}
+
+@keyframes draw-down {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
   }
 }
 
@@ -1042,6 +2058,14 @@ pre {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Without the shimmer, pending text is simply shown dimmed. */
+  .is-pending,
+  .ledger.is-pending .context {
+    color: var(--ink-soft);
+    background: none;
   }
 }

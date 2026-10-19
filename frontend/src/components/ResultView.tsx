@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState, type CSSProperties } from 'react';
 
 import { useI18n } from '../i18n/context';
 import { apiErrorMessage } from '../i18n/errors';
@@ -19,6 +19,11 @@ interface ResultViewProps {
 }
 
 type Tab = 'view' | 'json';
+
+/** Position in the reveal sequence; CSS turns it into an animation delay. */
+function order(index: number): CSSProperties {
+  return { '--i': index } as CSSProperties;
+}
 
 /** Warnings in the interface language; results saved before notices existed keep their text. */
 function warningTexts(meta: AnalysisMeta, t: Messages): string[] {
@@ -47,6 +52,19 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
   const textLang = status.status === 'translated' ? language : docLang;
   const pending = status.status === 'loading';
   const warnings = meta ? warningTexts(meta, t) : [];
+  // Translated texts "ink in" when they replace the originals.
+  const inkIn = status.status === 'translated' ? ' ink-in' : '';
+  const [downloaded, setDownloaded] = useState(false);
+
+  useEffect(() => {
+    if (!downloaded) return;
+    const timer = window.setTimeout(() => {
+      setDownloaded(false);
+    }, 1800);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [downloaded]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'view', label: t.result.tabView },
@@ -56,12 +74,18 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
   return (
     <article className="result" aria-labelledby="result-title">
       <header className="result-head">
-        <div className={`stamp stamp-${doc.type}`} aria-hidden="true">
-          {t.documentTypes[doc.type]}
+        <div className="stamp-wrap" aria-hidden="true">
+          <span className="stamp-ink" />
+          <div className={`stamp stamp-${doc.type}`}>{t.documentTypes[doc.type]}</div>
         </div>
         <div className="result-heading">
-          <h1 id="result-title" lang={docLang}>
-            {doc.title ?? doc.fileName}
+          <h1
+            id="result-title"
+            key={`title-${String(textLang)}`}
+            className={`result-title${pending && doc.title ? ' is-pending' : ''}${inkIn}`}
+            lang={doc.title ? textLang : undefined}
+          >
+            {texts.title ?? doc.fileName}
           </h1>
           <p className="result-sub">
             <span className="visually-hidden">
@@ -78,7 +102,7 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
         </div>
       </header>
 
-      <div className="result-toolbar">
+      <div className="result-toolbar reveal" style={order(1)}>
         <div className="tabs" role="tablist" aria-label={t.result.tabsLabel}>
           {tabs.map((item) => (
             <button
@@ -105,16 +129,24 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
             </button>
           ))}
         </div>
+        {pending && (
+          <p className="translating-pill" role="status">
+            <span className="quill" aria-hidden="true" />
+            {t.translation.translating}
+          </p>
+        )}
         <div className="button-row">
           <button
             type="button"
-            className="button button-primary"
+            className={`button button-primary button-download${downloaded ? ' is-done' : ''}`}
             title={t.result.downloadTitle(jsonFileName(doc.fileName))}
             onClick={() => {
               downloadResult(result);
+              setDownloaded(true);
             }}
           >
-            {t.result.download}
+            <span className="download-icon" aria-hidden="true" />
+            <span aria-live="polite">{downloaded ? t.result.downloaded : t.result.download}</span>
           </button>
           <button type="button" className="button button-quiet" onClick={onNew}>
             {t.result.analyseAnother}
@@ -123,7 +155,7 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
       </div>
 
       {warnings.length > 0 && (
-        <ul className="warnings" aria-label={t.result.warningsLabel}>
+        <ul className="warnings reveal" style={order(2)} aria-label={t.result.warningsLabel}>
           {warnings.map((warning) => (
             <li key={warning} className="notice notice-warn">
               {warning}
@@ -140,11 +172,6 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
         className="result-grid"
       >
         <div className="result-main">
-          {pending && (
-            <p className="visually-hidden" role="status">
-              {t.translation.translating}
-            </p>
-          )}
           {status.status === 'failed' && (
             <p className="notice notice-warn" role="alert">
               {t.translation.failed} {apiErrorMessage(status.error, t, language)}{' '}
@@ -154,27 +181,52 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
             </p>
           )}
 
-          <section aria-labelledby={`${baseId}-summary`} aria-busy={pending}>
+          <section
+            className="reveal"
+            style={order(3)}
+            aria-labelledby={`${baseId}-summary`}
+            aria-busy={pending}
+          >
             <h2 id={`${baseId}-summary`} className="section-title">
               {t.result.summary}
             </h2>
-            <p className={`summary${pending ? ' is-pending' : ''}`} lang={textLang}>
+            <p
+              key={`summary-${String(textLang)}`}
+              className={`summary${pending ? ' is-pending' : ''}${inkIn}`}
+              lang={textLang}
+            >
               {texts.summary}
             </p>
           </section>
 
-          <section aria-labelledby={`${baseId}-points`} aria-busy={pending}>
+          <section
+            className="reveal"
+            style={order(4)}
+            aria-labelledby={`${baseId}-points`}
+            aria-busy={pending}
+          >
             <h2 id={`${baseId}-points`} className="section-title">
               {t.result.keyPoints}
             </h2>
-            <ul className={`key-points${pending ? ' is-pending' : ''}`} lang={textLang}>
+            <ul
+              key={`points-${String(textLang)}`}
+              className={`key-points${pending ? ' is-pending' : ''}${inkIn}`}
+              lang={textLang}
+            >
               {texts.keyPoints.map((point, index) => (
-                <li key={`${String(index)}-${point}`}>{point}</li>
+                <li key={`${String(index)}-${point}`} style={order(index)}>
+                  {point}
+                </li>
               ))}
             </ul>
           </section>
 
-          <section aria-labelledby={`${baseId}-amounts`} aria-busy={pending}>
+          <section
+            className="reveal"
+            style={order(5)}
+            aria-labelledby={`${baseId}-amounts`}
+            aria-busy={pending}
+          >
             <h2 id={`${baseId}-amounts`} className="section-title">
               {t.result.amounts} <span className="count">{result.amounts.length}</span>
             </h2>
@@ -183,10 +235,16 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
               contexts={texts.amountContexts}
               lang={textLang}
               pending={pending}
+              inkIn={inkIn !== ''}
             />
           </section>
 
-          <section aria-labelledby={`${baseId}-dates`} aria-busy={pending}>
+          <section
+            className="reveal"
+            style={order(6)}
+            aria-labelledby={`${baseId}-dates`}
+            aria-busy={pending}
+          >
             <h2 id={`${baseId}-dates`} className="section-title">
               {t.result.dates} <span className="count">{result.dates.length}</span>
             </h2>
@@ -195,12 +253,13 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
               contexts={texts.dateContexts}
               lang={textLang}
               pending={pending}
+              inkIn={inkIn !== ''}
             />
           </section>
         </div>
 
         <aside className="result-side">
-          <section aria-labelledby={`${baseId}-doc`} className="facts">
+          <section aria-labelledby={`${baseId}-doc`} className="facts reveal" style={order(3)}>
             <h2 id={`${baseId}-doc`} className="section-title">
               {t.result.document}
             </h2>
@@ -233,17 +292,23 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
             </dl>
           </section>
 
-          <EntityList title={t.result.organizations} items={result.entities.organizations} />
-          <EntityList title={t.result.people} items={result.entities.people} />
+          <EntityList
+            title={t.result.organizations}
+            items={result.entities.organizations}
+            index={4}
+          />
+          <EntityList title={t.result.people} items={result.entities.people} index={5} />
 
-          <section aria-labelledby={`${baseId}-keywords`}>
+          <section className="reveal" style={order(6)} aria-labelledby={`${baseId}-keywords`}>
             <h2 id={`${baseId}-keywords`} className="section-title">
               {t.result.keywords}
             </h2>
             {result.keywords.length > 0 ? (
               <ul className="keywords" lang={docLang}>
-                {result.keywords.map((keyword) => (
-                  <li key={keyword}>{keyword}</li>
+                {result.keywords.map((keyword, index) => (
+                  <li key={keyword} style={order(index)}>
+                    {keyword}
+                  </li>
                 ))}
               </ul>
             ) : (
@@ -265,11 +330,11 @@ export function ResultView({ result, savedAt, onNew }: ResultViewProps) {
   );
 }
 
-function EntityList({ title, items }: { title: string; items: string[] }) {
+function EntityList({ title, items, index }: { title: string; items: string[]; index: number }) {
   const { t } = useI18n();
   const id = useId();
   return (
-    <section aria-labelledby={id}>
+    <section className="reveal" style={order(index)} aria-labelledby={id}>
       <h2 id={id} className="section-title">
         {title} <span className="count">{items.length}</span>
       </h2>

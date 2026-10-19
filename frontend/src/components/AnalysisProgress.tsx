@@ -37,7 +37,22 @@ export function AnalysisProgress({
   const uploadPercent = Math.round(progress * 100);
 
   return (
-    <section className="progress" aria-labelledby="progress-title" aria-busy="true">
+    <section
+      className={`progress progress-${phase}`}
+      aria-labelledby="progress-title"
+      aria-busy="true"
+    >
+      <div className="scanner" aria-hidden="true">
+        <span className="scanner-sheet">
+          <span className="scanner-line" />
+          <span className="scanner-line" />
+          <span className="scanner-line scanner-line-short" />
+          <span className="scanner-line" />
+          <span className="scanner-line scanner-line-short" />
+          <span className="scanner-beam" />
+        </span>
+        <span className="scanner-glow" />
+      </div>
       <h1 id="progress-title" className="progress-title">
         {t.progress.title}
       </h1>

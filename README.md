@@ -79,16 +79,26 @@ wyświetli, zapisze w historii lub pozwoli pobrać.
 W nagłówku jest lista **Język / Language**. Wybór zmienia cały interfejs (teksty, komunikaty
 błędów, ostrzeżenia, format liczb i dat) i jest zapamiętywany w przeglądarce; domyślnie polski.
 
-- **Podsumowanie, kluczowe informacje oraz opisy kwot i terminów** są tłumaczone na wybrany
-  język jednym zapytaniem (`POST /api/translate` z listą tekstów). Tłumaczenie jest zapisywane
+- **Tytuł, podsumowanie, kluczowe informacje oraz opisy kwot i terminów** są tłumaczone na
+  wybrany język jednym zapytaniem (`POST /api/translate` z listą tekstów). Tłumaczenie jest zapisywane
   w przeglądarce, więc ponowne przełączenie nie wysyła kolejnego zapytania.
 - **Wynik analizy i plik JSON nie zmieniają się** — zawsze są w języku dokumentu. Tłumaczenie
-  dotyczy tylko widoku. Tytuł, nazwy stron, osoby i słowa kluczowe zostają w oryginale.
+  dotyczy tylko widoku. Nazwy stron, osoby i słowa kluczowe zostają w oryginale.
+- W trakcie tłumaczenia teksty mienią się „atramentem”, a obok zakładek widać znacznik
+  „Tłumaczę…”; po zakończeniu przetłumaczone teksty pojawiają się z krótką animacją.
 - Ostrzeżenia mają kody (`meta.notices`), dzięki czemu interfejs pokazuje je w swoim języku;
   pole `meta.warnings` (po polsku) zostało bez zmian.
 - `/api/translate` traktuje teksty jako dane (polecenia w nich są tłumaczone, nie wykonywane),
   wymaga dokładnie jednego tłumaczenia na tekst (inaczej 1 ponowna próba), przyjmuje do 120
   tekstów (łącznie 30 000 znaków) i ma osobny limit (40 zapytań / 10 min na IP).
+
+## Animacje
+
+Ruch opowiada tę samą historię co wygląd (papier i pieczątka): arkusz unosi się nad strefą
+upuszczania, podczas analizy przesuwa się po nim wiązka skanera, wynik „przybija” pieczątka,
+a potem kolejno pojawiają się sekcje, kwoty „odliczają się” do wartości, a oś czasu rysuje się
+w dół. Wszystkie animacje są wyłączone, gdy system prosi o ograniczenie ruchu
+(`prefers-reduced-motion`).
 
 ## Bezpieczeństwo
 
