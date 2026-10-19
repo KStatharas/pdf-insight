@@ -2,25 +2,44 @@
 
 ## Narzędzia
 
-- **Agent AI do kodowania (sesja 1)** — backend (FastAPI). _Do uzupełnienia: nazwa narzędzia._
-- **Claude (Anthropic) jako agent (sesja 2)** — przegląd i testy backendu, frontend, CI/CD,
-  wdrożenie, testy end-to-end i dokumentacja.
+- **Cursor z modelem Claude (sesja 1)** — analiza briefu i pierwsza wersja backendu (FastAPI).
+- **Claude (Anthropic) jako agent w aplikacji Claude (sesja 2)** — przegląd i testy backendu,
+  przebudowa klienta AI, frontend, CI/CD, wdrożenie (Render + GitHub Pages), testy end-to-end
+  w przeglądarce i dokumentacja.
 - **Google Gemini** — model używany przez samą aplikację (analiza i OCR), nie do pisania kodu.
 - Weryfikacja: pytest, ruff, mypy (strict), Vitest + Testing Library, ESLint (strictTypeChecked),
   Playwright (zrzuty ekranu i przejście całego przepływu na 1360 px i 360 px, tryb jasny/ciemny).
 
 ## Kluczowe prompty
 
-1. **Backend:** _do uzupełnienia — prompt z sesji, w której powstał backend._
-2. **Frontend i wdrożenie** (oryginał po angielsku): „Agent stworzył już backend — sprawdź, czy
-   jest poprawny. Teraz trzeba stworzyć frontend w React + TypeScript i wdrożyć go na moim
-   GitHubie. Dokumentem testowym jest `Test_PDF_Insight_umowa_14-2026.pdf` i musi być
-   zinterpretowany poprawnie.”
-3. **Weryfikacja na dokumencie testowym** (krok, który agent wykonał w ramach promptu 2): przeanalizuj dokument testowy prawdziwym modelem
-   i porównaj wynik z treścią PDF: kwoty w trzech walutach, daty, osoby, aneks ze skanu
-   (str. 11) i pułapka prompt injection w § 5.
-4. **Przegląd wizualny** (jak wyżej): zrób zrzuty ekranu wszystkich stanów na desktopie i telefonie (360 px,
-   tryb ciemny) i popraw to, co jest nieczytelne.
+Prompty pisałem po angielsku; cytuję je dosłownie, z krótkim opisem po polsku.
+
+1. **Zrozumienie zadania** (Cursor, sesja 1, z załączonym briefem PDF):
+   „Read this, and list me exactly what the task is in English.”
+   Brief jest po polsku, więc pierwszym krokiem było rozpisanie wymagań (MUST/SHOULD/COULD,
+   schemat JSON, bezpieczeństwo, oddanie). Na tej podstawie w sesji 1 powstał backend.
+2. **Frontend, weryfikacja backendu i wdrożenie** (sesja 2):
+   „I'm trying to create the app specified in Brief_Vibe_Coder_PDF_Insight.pdf. An agent has
+   already created a backend as you can see. You can test if it is correct. Now a frontend needs
+   to be created with react+typescript and also be deployed on my github. The test subject pdf
+   should be Test_PDF_Insight_umowa_14-2026.pdf and it needs to be interpreted correctly.”
+   Agent przeanalizował dokument testowy prawdziwym modelem i porównał wynik z treścią PDF
+   (tabela „Weryfikacja” poniżej).
+3. **Priorytet: wymagania ponad istniejący kod**:
+   „It's fine overriding the work of the other agent in the backend. What's more important is
+   to meet the backend to meet the requirements and be functional.”
+   Po tym poleceniu klient AI został przepisany na natywne API Gemini, a OCR włączony do
+   jednego zapytania (szczegóły w sekcji o błędach).
+4. **Wybór języka (PL/EN)**:
+   „Add an extra button named language (dropdown) that currently will contain two options:
+   Polish and English. Selecting another language will not only change the website's UI
+   language but also translate the pdf's output's summary. JSON will remain as is.”
+   Doprecyzowane później: tłumaczone są też kluczowe informacje, kwoty i daty, bez
+   dodatkowych komentarzy i bez linku „Pokaż oryginał”.
+5. **Animacje i styl**:
+   „add some playful animations and improve all the styles of the website as well as making
+   the loading state of translation more visible. Also translate the title when language is
+   changed.”
 
 ## Gdzie AI się pomyliło i jak to poprawiłem
 
