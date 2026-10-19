@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     llm_provider: Provider = "gemini"
     llm_base_url: str = ""
     llm_model: str = "gemini-3.8-flash"
+    # Tried in order when the main model is overloaded, rate limited or unavailable (Gemini only).
+    llm_fallback_models: str = "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite"
     llm_reasoning_effort: str = "low"
     llm_response_format: ResponseFormatMode = "json_schema"
     llm_timeout_seconds: float = 40.0
@@ -41,6 +43,11 @@ class Settings(BaseSettings):
     ocr_enabled: bool = True
     ocr_max_pages: int = 4
     ocr_min_chars: int = 20
+
+    @property
+    def fallback_models(self) -> list[str]:
+        models = [m.strip() for m in self.llm_fallback_models.split(",") if m.strip()]
+        return [m for m in dict.fromkeys(models) if m != self.llm_model]
 
     @property
     def base_url(self) -> str:

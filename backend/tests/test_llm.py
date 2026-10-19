@@ -101,7 +101,8 @@ def test_parse_json_object_rejects_non_objects(text: str) -> None:
 
 def _gemini(handler: httpx.MockTransport, **settings: object) -> GeminiChat:
     client = httpx.AsyncClient(transport=handler)
-    return GeminiChat(make_settings(LLM_API_KEY="AQ.test-key", **settings), client)
+    values: dict[str, object] = {"llm_fallback_models": "", **settings}
+    return GeminiChat(make_settings(LLM_API_KEY="AQ.test-key", **values), client)
 
 
 def _gemini_reply(*texts: str, thought: str | None = None) -> httpx.Response:
@@ -232,3 +233,31 @@ def test_gemini_blocked_prompt_is_reported() -> None:
     with pytest.raises(AppError) as error:
         asyncio.run(chat.complete([{"role": "user", "content": "a"}]))
     assert error.value.code == "AI_REFUSED"
+
+
+def test_gemini_falls_back_to_the_next_model_and_keeps_using_it() -> None:
+    urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        urls.append(request.url.path)
+        if "gemini-3.8-flash" in request.url.path:
+            return httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
+        if "model-b" in request.url.path:
+            return httpx.Response(429, json={"error": {"status": "RESOURCE_EXHAUSTED"}})
+        return _gemini_reply("{}")
+
+    chat = _gemini(httpx.MockTransport(handler), llm_fallback_models="model-b, model-c")
+    asyncio.run(chat.complete([{"role": "user", "content": "a"}]))
+    asyncio.run(chat.complete([{"role": "user", "content": "b"}]))
+
+    models = [path.split("/")[-1].split(":")[0] for path in urls]
+    assert models == ["gemini-3.8-flash", "model-b", "model-c", "model-c"]
+    assert chat.name == "model-c"
+
+
+def test_gemini_reports_the_error_when_every_model_fails() -> None:
+    reply = httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
+    chat = _gemini(httpx.MockTransport(lambda _: reply), llm_fallback_models="model-b")
+    with pytest.raises(AppError) as error:
+        asyncio.run(chat.complete([{"role": "user", "content": "a"}]))
+    assert error.value.code == "AI_UNAVAILABLE"

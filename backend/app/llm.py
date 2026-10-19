@@ -65,6 +65,7 @@ class OpenAICompatibleChat:
         return await _post(self._client, self._url, payload, self._headers)
 
 
+_TRY_NEXT_MODEL = frozenset({404, 429, 500, 502, 503, 504})
 _DATA_URL = re.compile(r"^data:(?P<mime>[\w.+-]+/[\w.+-]+);base64,(?P<data>.+)$", re.DOTALL)
 
 
@@ -77,17 +78,42 @@ class GeminiChat:
     """
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient) -> None:
+        self._models = [settings.llm_model, *settings.fallback_models]
+        self._preferred = 0
         self.name = settings.llm_model
         self._client = client
-        self._url = f"{settings.base_url}/models/{settings.llm_model}:generateContent"
+        self._base_url = settings.base_url
         self._headers = {"x-goog-api-key": settings.llm_api_key.get_secret_value()}
         self._thinking_level = settings.llm_reasoning_effort
         self._format_mode: ResponseFormatMode = settings.llm_response_format
 
     async def complete(self, messages: list[Message], *, schema: JsonObject | None = None) -> str:
-        response = await _post(
-            self._client, self._url, self._payload(messages, schema), self._headers
-        )
+        # Free-tier capacity differs per model: when one is overloaded, rate limited or not
+        # available for the key, try the next one and keep using whichever answered.
+        order = self._models[self._preferred :] + self._models[: self._preferred]
+        for attempt, model in enumerate(order):
+            response = await self._request(model, messages, schema)
+            is_last = attempt == len(order) - 1
+            if response.status_code in _TRY_NEXT_MODEL and not is_last:
+                logger.warning(
+                    "Model %s answered %s, trying %s: %s",
+                    model,
+                    response.status_code,
+                    order[attempt + 1],
+                    _error_snippet(response),
+                )
+                continue
+            _raise_for_status(response)
+            self._preferred = self._models.index(model)
+            self.name = model
+            return _gemini_text(response.json())
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    async def _request(
+        self, model: str, messages: list[Message], schema: JsonObject | None
+    ) -> httpx.Response:
+        url = f"{self._base_url}/models/{model}:generateContent"
+        response = await _post(self._client, url, self._payload(messages, schema), self._headers)
         # Optional features (JSON Schema, thinking level) differ between model generations. If the
         # provider rejects the request, drop them one at a time and remember that for later calls.
         while (
@@ -99,11 +125,9 @@ class GeminiChat:
                 "Gemini rejected the request, retrying simpler: %s", _error_snippet(response)
             )
             response = await _post(
-                self._client, self._url, self._payload(messages, schema), self._headers
+                self._client, url, self._payload(messages, schema), self._headers
             )
-
-        _raise_for_status(response)
-        return _gemini_text(response.json())
+        return response
 
     def _degrade(self, schema: JsonObject | None) -> bool:
         if schema is not None and self._format_mode == "json_schema":
