@@ -24,9 +24,11 @@ class Settings(BaseSettings):
     # default). "openai": any OpenAI-compatible Chat Completions API.
     llm_provider: Provider = "gemini"
     llm_base_url: str = ""
-    llm_model: str = "gemini-3.8-flash"
+    # Flash-Lite answers in ~15 s on the free tier; the larger Flash models returned 503
+    # (overloaded) for free-tier keys in October 2026 and are kept as fallbacks.
+    llm_model: str = "gemini-3.5-flash-lite"
     # Tried in order when the main model is overloaded, rate limited or unavailable (Gemini only).
-    llm_fallback_models: str = "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite"
+    llm_fallback_models: str = "gemini-3.1-flash-lite,gemini-3.8-flash,gemini-3.6-flash"
     llm_reasoning_effort: str = "low"
     llm_response_format: ResponseFormatMode = "json_schema"
     llm_timeout_seconds: float = 40.0

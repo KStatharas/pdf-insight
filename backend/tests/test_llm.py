@@ -37,7 +37,7 @@ def test_sends_openai_compatible_request() -> None:
     assert str(request.url).endswith("/v1beta/openai/chat/completions")
     assert request.headers["authorization"] == "Bearer test-key"
     payload = json.loads(request.content)
-    assert payload["model"] == "gemini-3.8-flash"
+    assert payload["model"] == "gemini-3.5-flash-lite"
     assert payload["reasoning_effort"] == "low"
     assert payload["response_format"]["type"] == "json_schema"
     assert payload["response_format"]["json_schema"]["schema"] == SCHEMA
@@ -148,7 +148,7 @@ def test_sends_native_gemini_request() -> None:
 
     assert text == '{"ok": true}'  # thought parts are dropped
     request = requests[0]
-    assert str(request.url).endswith("/v1beta/models/gemini-3.8-flash:generateContent")
+    assert str(request.url).endswith("/v1beta/models/gemini-3.5-flash-lite:generateContent")
     assert request.headers["x-goog-api-key"] == "AQ.test-key"
     assert "authorization" not in request.headers
     payload = json.loads(request.content)
@@ -240,7 +240,7 @@ def test_gemini_falls_back_to_the_next_model_and_keeps_using_it() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         urls.append(request.url.path)
-        if "gemini-3.8-flash" in request.url.path:
+        if "gemini-3.5-flash-lite" in request.url.path:
             return httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
         if "model-b" in request.url.path:
             return httpx.Response(429, json={"error": {"status": "RESOURCE_EXHAUSTED"}})
@@ -251,7 +251,7 @@ def test_gemini_falls_back_to_the_next_model_and_keeps_using_it() -> None:
     asyncio.run(chat.complete([{"role": "user", "content": "b"}]))
 
     models = [path.split("/")[-1].split(":")[0] for path in urls]
-    assert models == ["gemini-3.8-flash", "model-b", "model-c", "model-c"]
+    assert models == ["gemini-3.5-flash-lite", "model-b", "model-c", "model-c"]
     assert chat.name == "model-c"
 
 

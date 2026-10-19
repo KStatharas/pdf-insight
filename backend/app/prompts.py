@@ -38,15 +38,20 @@ quote, proposal), "raport" (report, analysis); anything else is "inne".
 - document.date: the document's own date (issue or signing date) as YYYY-MM-DD, or null.
 - summary: 3 to 5 complete sentences: what the document is, who is involved and the most \
 important facts (amounts, dates, obligations).
+- Annexes, amendments and corrections can change earlier terms (for example a new fee from a \
+given date). Report both the original and the changed values in amounts/dates, and mention the \
+change in the summary or keyPoints. Scanned pages are marked [page N] like any other page.
 - keyPoints: 3 to 7 short, specific facts from the document.
 - entities.organizations: names of companies and institutions. entities.people: full names of \
 people. No duplicates.
-- amounts: the most important monetary amounts (at most 25): prices, fees, totals, penalties, \
-budgets. "value" is a JSON number with "." as the decimal separator and no thousands \
-separators (e.g. 184500.00). "currency" is an ISO 4217 code ("zł" is "PLN", "€" is "EUR"); \
+- amounts: the important monetary amounts (at most 40), most important first: totals, prices, \
+fees, subscriptions, licences, penalties, budgets, advance payments, invoice totals. "value" \
+is a JSON number with "." as the decimal separator and no thousands separators \
+(e.g. 184500.00). "currency" is an ISO 4217 code ("zł" is "PLN", "€" is "EUR"); \
 never convert between currencies. "context" briefly says what the amount is.
-- dates: important dates (at most 20) that can be written as a full calendar day, formatted \
-YYYY-MM-DD, each with a short "context". Skip vague periods such as "Q1 2027".
+- dates: important dates (at most 30), most important first, that can be written as a full \
+calendar day, formatted YYYY-MM-DD, each with a short "context". Skip vague periods \
+such as "Q1 2027".
 - keywords: 3 to 10 keywords or short phrases.
 
 Return only the JSON object, without markdown."""
@@ -64,7 +69,8 @@ information is missing.
 - JSON keys stay in English; values are written in the document's language.
 - document: the language (ISO 639-1), type ("faktura" | "umowa" | "oferta" | "raport" | \
 "inne"), title and main date (YYYY-MM-DD or null) that describe the whole document.
-- summary: 3 to 5 complete sentences about the whole document.
+- summary: 3 to 5 complete sentences about the whole document. If a part describes an annex or \
+amendment that changes earlier terms, mention the change.
 - keyPoints: the 3 to 7 most important facts. keywords: 3 to 10 keywords.
 
 Return only the JSON object, without markdown."""
@@ -116,7 +122,7 @@ ANALYSIS_JSON_SCHEMA: JsonObject = {
         },
         "amounts": {
             "type": "array",
-            "maxItems": 25,
+            "maxItems": 40,
             "items": {
                 "type": "object",
                 "properties": {
@@ -130,7 +136,7 @@ ANALYSIS_JSON_SCHEMA: JsonObject = {
         },
         "dates": {
             "type": "array",
-            "maxItems": 20,
+            "maxItems": 30,
             "items": {
                 "type": "object",
                 "properties": {
