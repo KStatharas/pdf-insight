@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     max_pages: int = 500
     rate_limit_requests: int = 10
     rate_limit_window_seconds: int = 600
+    translate_rate_limit_requests: int = 40
     max_concurrent_analyses: int = 3
 
     chunk_chars: int = 60_000

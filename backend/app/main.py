@@ -17,7 +17,7 @@ from app.config import Settings, get_settings
 from app.errors import AppError
 from app.llm import ChatModel, create_chat
 from app.rate_limit import RateLimiter
-from app.schemas import AnalysisResult, ErrorResponse
+from app.schemas import AnalysisResult, ErrorResponse, TranslateRequest, TranslateResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("app")
@@ -32,6 +32,11 @@ _ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
 def create_app(settings: Settings | None = None, chat: ChatModel | None = None) -> FastAPI:
     settings = settings or get_settings()
     limiter = RateLimiter(settings.rate_limit_requests, settings.rate_limit_window_seconds)
+    # Translations are short and triggered by switching the interface language; they get their own
+    # budget so that they cannot use up the analysis limit (and the other way round).
+    translate_limiter = RateLimiter(
+        settings.translate_rate_limit_requests, settings.rate_limit_window_seconds
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -76,10 +81,12 @@ def create_app(settings: Settings | None = None, chat: ChatModel | None = None) 
         return _error_response(exc)
 
     @app.exception_handler(RequestValidationError)
-    async def handle_validation_error(_: Request, __: RequestValidationError) -> JSONResponse:
-        return _error_response(
-            AppError("BAD_REQUEST", "Nie przesłano pliku PDF w polu formularza „file”.", 400)
-        )
+    async def handle_validation_error(request: Request, _: RequestValidationError) -> JSONResponse:
+        if request.url.path == "/api/translate":
+            message = "Niepoprawne żądanie tłumaczenia (tekst do 6000 znaków, język pl lub en)."
+        else:
+            message = "Nie przesłano pliku PDF w polu formularza „file”."
+        return _error_response(AppError("BAD_REQUEST", message, 400))
 
     @app.get("/")
     async def root() -> dict[str, str]:
@@ -134,6 +141,33 @@ def create_app(settings: Settings | None = None, chat: ChatModel | None = None) 
                 raise AppError(
                     "INTERNAL_ERROR", "Wystąpił nieoczekiwany błąd serwera. Spróbuj ponownie.", 500
                 ) from exc
+
+    @app.post("/api/translate", responses=_ERROR_RESPONSES)
+    async def translate(request: Request, body: TranslateRequest) -> TranslateResponse:
+        retry_after = translate_limiter.hit(request.client.host if request.client else "unknown")
+        if retry_after is not None:
+            raise AppError(
+                "RATE_LIMITED",
+                "Wykonano zbyt wiele tłumaczeń w krótkim czasie. "
+                f"Spróbuj ponownie za {math.ceil(retry_after / 60)} min.",
+                429,
+                headers={"Retry-After": str(retry_after)},
+            )
+        analyzer: Analyzer | None = request.app.state.analyzer
+        if analyzer is None:
+            raise AppError(
+                "AI_NOT_CONFIGURED", "Usługa AI nie jest skonfigurowana na serwerze.", 503
+            )
+        try:
+            text = await analyzer.translate(body.text, body.target_language)
+        except AppError:
+            raise
+        except Exception as exc:
+            logger.exception("Unexpected error during translation")
+            raise AppError(
+                "INTERNAL_ERROR", "Wystąpił nieoczekiwany błąd serwera. Spróbuj ponownie.", 500
+            ) from exc
+        return TranslateResponse(text=text, target_language=body.target_language)
 
     return app
 

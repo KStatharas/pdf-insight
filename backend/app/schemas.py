@@ -153,12 +153,25 @@ class DocumentInfo(CamelModel):
     date: OptionalIsoDate = None
 
 
+NoticeCode = Literal["PROMPT_INJECTION", "UNREAD_PAGES", "TRUNCATED"]
+TargetLanguage = Literal["pl", "en"]
+
+
+class Notice(CamelModel):
+    """Machine-readable form of a warning, so the interface can show it in its own language."""
+
+    code: NoticeCode
+    pages: list[int] = Field(default_factory=list)
+    percent: int | None = None
+
+
 class AnalysisMeta(CamelModel):
     model: str
     chunks: int
     ocr_pages: list[int]
     truncated: bool
     warnings: list[str]
+    notices: list[Notice] = Field(default_factory=list)
     processing_ms: int
     steps_ms: dict[str, int] = Field(default_factory=dict)
     """Duration of each step: extract, ocr, analysis, merge."""
@@ -173,6 +186,20 @@ class AnalysisResult(CamelModel):
     dates: list[DateItem]
     keywords: list[str]
     meta: AnalysisMeta
+
+
+class TranslateRequest(CamelModel):
+    text: str = Field(min_length=1, max_length=6000)
+    target_language: TargetLanguage
+
+
+class TranslateResponse(CamelModel):
+    text: str
+    target_language: TargetLanguage
+
+
+class LlmTranslation(CamelModel):
+    text: str = Field(min_length=1, max_length=12000)
 
 
 class ErrorBody(BaseModel):

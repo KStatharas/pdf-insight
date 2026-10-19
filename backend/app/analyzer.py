@@ -15,11 +15,13 @@ from app.pdf_extract import PageImage, PageText, extract_pdf
 from app.prompts import (
     ANALYSIS_JSON_SCHEMA,
     OVERVIEW_JSON_SCHEMA,
+    TRANSLATE_JSON_SCHEMA,
     analysis_messages,
     describe_error,
     merge_messages,
     repair_messages,
     scanned_page_placeholder,
+    translate_messages,
 )
 from app.schemas import (
     Amount,
@@ -30,6 +32,9 @@ from app.schemas import (
     Entities,
     LlmAnalysis,
     LlmOverview,
+    LlmTranslation,
+    Notice,
+    TargetLanguage,
     unique_strings,
 )
 
@@ -78,13 +83,16 @@ class Analyzer:
             )
 
         warnings: list[str] = []
+        notices: list[Notice] = []
         unread = [n for n in extracted.scanned_pages if n not in attached]
         if unread:
             warnings.append(
                 f"Nie odczytano tekstu ze stron bez warstwy tekstowej: {_page_list(unread)}."
             )
+            notices.append(Notice(code="UNREAD_PAGES", pages=unread))
         if looks_like_prompt_injection(text_layer):
             warnings.append(INJECTION_WARNING)
+            notices.append(Notice(code="PROMPT_INJECTION"))
 
         chunks = build_chunks(
             pages, chunk_chars=settings.chunk_chars, max_chunks=settings.max_chunks
@@ -95,6 +103,7 @@ class Analyzer:
                 "Dokument jest bardzo długi, dlatego przeanalizowano tylko jego początkową "
                 f"część (ok. {percent}% treści)."
             )
+            notices.append(Notice(code="TRUNCATED", percent=percent))
 
         total = len(chunks.texts)
         step_started = time.perf_counter()
@@ -145,10 +154,17 @@ class Analyzer:
                 ocr_pages=sorted(attached),
                 truncated=chunks.truncated,
                 warnings=warnings,
+                notices=notices,
                 processing_ms=processing_ms,
                 steps_ms=steps,
             ),
         )
+
+    async def translate(self, text: str, target_language: TargetLanguage) -> str:
+        reply = await self._complete_validated(
+            translate_messages(text, target_language), LlmTranslation, TRANSLATE_JSON_SCHEMA
+        )
+        return reply.text
 
     async def _analyze_chunk(
         self, text: str, images: list[PageImage], part: int, total: int
