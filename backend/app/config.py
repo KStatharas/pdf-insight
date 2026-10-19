@@ -5,6 +5,12 @@ from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ResponseFormatMode = Literal["json_schema", "json_object", "none"]
+Provider = Literal["gemini", "openai"]
+
+_DEFAULT_BASE_URLS: dict[str, str] = {
+    "gemini": "https://generativelanguage.googleapis.com/v1beta",
+    "openai": "https://generativelanguage.googleapis.com/v1beta/openai/",
+}
 
 
 class Settings(BaseSettings):
@@ -14,7 +20,10 @@ class Settings(BaseSettings):
         default=SecretStr(""),
         validation_alias=AliasChoices("LLM_API_KEY", "GEMINI_API_KEY"),
     )
-    llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    # "gemini": native Gemini API (works with the "AQ." auth keys that AI Studio issues by
+    # default). "openai": any OpenAI-compatible Chat Completions API.
+    llm_provider: Provider = "gemini"
+    llm_base_url: str = ""
     llm_model: str = "gemini-3.8-flash"
     llm_reasoning_effort: str = "low"
     llm_response_format: ResponseFormatMode = "json_schema"
@@ -32,6 +41,14 @@ class Settings(BaseSettings):
     ocr_enabled: bool = True
     ocr_max_pages: int = 4
     ocr_min_chars: int = 20
+
+    @property
+    def base_url(self) -> str:
+        url = (self.llm_base_url or _DEFAULT_BASE_URLS[self.llm_provider]).rstrip("/")
+        if self.llm_provider == "gemini" and url.endswith("/openai"):
+            # An older .env may still point at the OpenAI-compatible path.
+            url = url.removesuffix("/openai")
+        return url
 
     @property
     def origins(self) -> list[str]:

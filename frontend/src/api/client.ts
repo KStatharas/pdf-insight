@@ -28,6 +28,7 @@ const NOT_RETRYABLE = new Set([
   'PDF_ENCRYPTED',
   'PDF_NO_TEXT',
   'TOO_MANY_PAGES',
+  'AI_REFUSED',
 ]);
 
 export type UploadPhase = 'upload' | 'analysis';

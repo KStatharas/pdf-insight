@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, Response
 from app.analyzer import Analyzer
 from app.config import Settings, get_settings
 from app.errors import AppError
-from app.llm import ChatModel, OpenAICompatibleChat
+from app.llm import ChatModel, create_chat
 from app.rate_limit import RateLimiter
 from app.schemas import AnalysisResult, ErrorResponse
 
@@ -38,7 +38,7 @@ def create_app(settings: Settings | None = None, chat: ChatModel | None = None) 
         async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
             model = chat
             if model is None and settings.llm_api_key.get_secret_value():
-                model = OpenAICompatibleChat(settings, client)
+                model = create_chat(settings, client)
             if model is None:
                 logger.warning("LLM_API_KEY is not set; /api/analyze will return 503")
             app.state.analyzer = Analyzer(model, settings) if model else None
